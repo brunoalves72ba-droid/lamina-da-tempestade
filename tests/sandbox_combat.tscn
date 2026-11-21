@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/sandbox_combat.gd" id="1_sandbox"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="3_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/damage_number_spawner.gd" id="4_numbers"]
+[ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/enemies/attack_token_manager.gd" id="6_tokens"]
+[ext_resource type="Resource" path="res://data/combat/attack_tokens.tres" id="7_token_data"]
+[ext_resource type="Script" path="res://scripts/combat/game_feel.gd" id="8_feel"]
+[ext_resource type="Resource" path="res://data/combat/game_feel.tres" id="9_feel_data"]
+
+[sub_resource type="Environment" id="Environment_sandbox"]
+background_mode = 1
+background_color = Color(0.03, 0.035, 0.05, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.35, 0.4, 0.52, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 3
+fog_enabled = true
+fog_light_color = Color(0.16, 0.18, 0.25, 1)
+fog_density = 0.03
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.16, 0.15, 0.15, 1)
+roughness = 0.95
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector2(80, 80)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(30, 1, 30)
+
+[node name="SandboxCombat" type="Node3D"]
+script = ExtResource("1_sandbox")
+enemy_scene = ExtResource("3_enemy")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sandbox")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819152, -0.469846, 0.329877, 0, 0.574658, 0.818393, -0.573576, -0.671010, 0.471113, 0, 8, 0)
+light_color = Color(0.62, 0.7, 0.92, 1)
+light_energy = 0.7
+shadow_enabled = true
+
+[node name="Torch" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2.2, -1.2)
+light_color = Color(1, 0.58, 0.28, 1)
+light_energy = 2.5
+shadow_enabled = true
+omni_range = 8.0
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("PlaneMesh_floor")
+
+[node name="FloorShape" type="CollisionShape3D" parent="Floor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+unique_name_in_owner = true
+
+[node name="Enemy" parent="." instance=ExtResource("3_enemy")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.2)
+
+[node name="Camera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8, 3.0, 3.2)
+current = true
+fov = 60.0
+
+[node name="DamageNumbers" type="Node3D" parent="."]
+script = ExtResource("4_numbers")
+
+[node name="GameFeel" type="Node" parent="."]
+script = ExtResource("8_feel")
+data = ExtResource("9_feel_data")
+
+[node name="AttackTokenManager" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("6_tokens")
+data = ExtResource("7_token_data")
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+unique_name_in_owner = true

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"armor"
+display_name = "Armadura"
+stat_label = "Vida"
+costs = Array[int]([50, 100, 175, 275, 400])
+values = Array[float]([100.0, 120.0, 140.0, 160.0, 180.0, 200.0])
+secondary_label = "Redução"
+secondary_values = Array[float]([0.0, 0.03, 0.06, 0.09, 0.12, 0.15])

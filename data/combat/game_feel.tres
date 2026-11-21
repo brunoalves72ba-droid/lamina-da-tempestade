@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="GameFeelData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/game_feel_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+hitstop_time_scale = 0.05
+hitstop_normal = 0.05
+hitstop_heavy = 0.1
+hitstop_parry = 0.08
+finisher_time_scale = 0.2
+finisher_duration = 0.6
+finisher_fov_factor = 0.75
+shake_heavy = 0.35
+shake_player_hurt = 0.5
+shake_storm = 0.9
+shake_max_offset = 0.3
+shake_decay = 2.5
+flash_energy = 3.0
+flash_range = 7.0

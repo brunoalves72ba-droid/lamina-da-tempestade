@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/power_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+kind = 0
+display_name = "Lâmina Voltaica"
+cooldown = 6.0
+charge_cost = 0.0
+cast_time = 0.15
+recovery_time = 0.25
+requires_melee = true
+is_heavy = true
+damage_multiplier = 2.5
+chain_multipliers = Array[float]([])
+chain_range = 0.0
+area_multiplier = 0.0
+area_radius = 0.0

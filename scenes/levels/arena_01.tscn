@@ -1,0 +1,438 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rail/level.gd" id="1_level"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://scripts/rail/rail_controller.gd" id="3_rail"]
+[ext_resource type="Script" path="res://scripts/rail/wave_spawner.gd" id="4_spawner"]
+[ext_resource type="Script" path="res://scripts/enemies/attack_token_manager.gd" id="5_tokens"]
+[ext_resource type="Resource" path="res://data/combat/attack_tokens.tres" id="6_token_data"]
+[ext_resource type="Script" path="res://scripts/rail/camera_rig.gd" id="7_camera"]
+[ext_resource type="Script" path="res://scripts/combat/damage_number_spawner.gd" id="8_numbers"]
+[ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="9_hud"]
+[ext_resource type="Script" path="res://scripts/rail/encounter.gd" id="10_encounter"]
+[ext_resource type="Script" path="res://scripts/resources/wave_data.gd" id="11_wave_script"]
+[ext_resource type="Resource" path="res://data/waves/arena01_e1.tres" id="12_wave1"]
+[ext_resource type="Resource" path="res://data/waves/arena01_e2.tres" id="13_wave2"]
+[ext_resource type="Resource" path="res://data/waves/arena01_e3.tres" id="14_wave3"]
+[ext_resource type="PackedScene" path="res://scenes/levels/props/torch.tscn" id="15_torch"]
+[ext_resource type="Script" path="res://scripts/combat/game_feel.gd" id="16_feel"]
+[ext_resource type="Resource" path="res://data/combat/game_feel.tres" id="17_feel_data"]
+[ext_resource type="Script" path="res://scripts/vfx/storm_sky.gd" id="18_sky"]
+[ext_resource type="PackedScene" path="res://ui/menus/element_select.tscn" id="19_select"]
+[ext_resource type="PackedScene" path="res://ui/menus/result_screen.tscn" id="20_result"]
+[ext_resource type="PackedScene" path="res://ui/menus/pause_menu.tscn" id="21_pause"]
+[ext_resource type="Resource" path="res://data/combat/rewards.tres" id="22_rewards"]
+[ext_resource type="Resource" path="res://data/upgrades/sword.tres" id="23_sword"]
+[ext_resource type="Resource" path="res://data/upgrades/armor.tres" id="24_armor"]
+
+[sub_resource type="Environment" id="Environment_arena"]
+background_mode = 1
+background_color = Color(0.025, 0.03, 0.045, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.32, 0.37, 0.5, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 3
+fog_enabled = true
+fog_light_color = Color(0.14, 0.16, 0.23, 1)
+fog_density = 0.035
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.15, 0.14, 0.14, 1)
+roughness = 0.95
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+material = SubResource("StandardMaterial3D_ground")
+size = Vector2(140, 140)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(140, 1, 140)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_stone"]
+albedo_color = Color(0.3, 0.29, 0.28, 1)
+roughness = 0.9
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_column"]
+material = SubResource("StandardMaterial3D_stone")
+top_radius = 0.5
+bottom_radius = 0.58
+height = 6.0
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_broken"]
+material = SubResource("StandardMaterial3D_stone")
+top_radius = 0.5
+bottom_radius = 0.58
+height = 2.4
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_moss"]
+albedo_color = Color(0.2, 0.23, 0.19, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="BoxMesh_capital"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(1.4, 0.35, 1.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_plinth"]
+material = SubResource("StandardMaterial3D_moss")
+size = Vector3(1.5, 0.3, 1.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_chunk"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(0.9, 0.5, 0.9)
+
+[sub_resource type="BoxMesh" id="BoxMesh_arch_pillar"]
+material = SubResource("StandardMaterial3D_moss")
+size = Vector3(1.0, 4.6, 1.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lintel"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(6.8, 0.8, 1.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall8"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(1, 3.5, 8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall10"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(1, 3.5, 10)
+
+[sub_resource type="BoxMesh" id="BoxMesh_back_wall"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(16, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rubble"]
+material = SubResource("StandardMaterial3D_stone")
+size = Vector3(1.5, 0.6, 1.2)
+
+[sub_resource type="Curve3D" id="Curve3D_rail"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, -3, 0, 0, -12, 0, 0, 3, 0, 0, -3, 8, 0, -24, 0, 0, 0, 0, 0, 0, 8, 0, -48),
+"tilts": PackedFloat32Array(0, 0, 0, 0)
+}
+point_count = 4
+
+[node name="Arena01" type="Node3D"]
+script = ExtResource("1_level")
+element_select_scene = ExtResource("19_select")
+result_scene = ExtResource("20_result")
+pause_scene = ExtResource("21_pause")
+rewards = ExtResource("22_rewards")
+sword_upgrade = ExtResource("23_sword")
+armor_upgrade = ExtResource("24_armor")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_arena")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819152, -0.469846, 0.329877, 0, 0.574658, 0.818393, -0.573576, -0.67101, 0.471113, 0, 8, 0)
+light_color = Color(0.62, 0.7, 0.92, 1)
+light_energy = 0.6
+shadow_enabled = true
+
+[node name="StormSky" type="DirectionalLight3D" parent="." node_paths=PackedStringArray("player")]
+transform = Transform3D(1, 0, 0, 0, 0.258819, 0.965926, 0, -0.965926, 0.258819, 0, 10, 0)
+light_color = Color(0.72, 0.8, 1, 1)
+light_energy = 0.0
+script = ExtResource("18_sky")
+player = NodePath("../Player")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -24)
+
+[node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="GroundShape" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="Ruins" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Pillar1" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 3, -2)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar2" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 3, -4)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar3" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3, -16)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar4" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 3, -18)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar5" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 3, -33)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar6" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.5, 3, -40)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar7" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 3, -47)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Pillar8" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.5, 3, -50)
+mesh = SubResource("CylinderMesh_column")
+
+[node name="Broken1" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1.2, -9)
+mesh = SubResource("CylinderMesh_broken")
+
+[node name="Broken2" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.2, -13)
+mesh = SubResource("CylinderMesh_broken")
+
+[node name="Broken3" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, 1.2, -27)
+mesh = SubResource("CylinderMesh_broken")
+
+[node name="Broken4" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 1.2, -40)
+mesh = SubResource("CylinderMesh_broken")
+
+[node name="WallWest" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 1.75, -6)
+mesh = SubResource("BoxMesh_wall8")
+
+[node name="WallEast" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 1.75, -36)
+mesh = SubResource("BoxMesh_wall10")
+
+[node name="WallInner" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, -44)
+mesh = SubResource("BoxMesh_wall10")
+
+[node name="WallBack" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, -56)
+mesh = SubResource("BoxMesh_back_wall")
+
+[node name="Rubble1" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(0.92, 0, 0.39, 0, 1, 0, -0.39, 0, 0.92, 2, 0.3, -7)
+mesh = SubResource("BoxMesh_rubble")
+
+[node name="Rubble2" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(0.8, 0, -0.6, 0, 1, 0, 0.6, 0, 0.8, 10.5, 0.3, -41)
+mesh = SubResource("BoxMesh_rubble")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Capital" type="MeshInstance3D" parent="Ruins/Pillar8"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+mesh = SubResource("BoxMesh_capital")
+
+[node name="Plinth" type="MeshInstance3D" parent="Ruins/Pillar8"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.85, 0)
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="Chunk" type="MeshInstance3D" parent="Ruins/Broken1"]
+transform = Transform3D(0.94, -0.342, 0, 0.342, 0.94, 0, 0, 0, 1, 0.1, 1.4, 0)
+mesh = SubResource("BoxMesh_chunk")
+
+[node name="Chunk" type="MeshInstance3D" parent="Ruins/Broken2"]
+transform = Transform3D(0.94, -0.342, 0, 0.342, 0.94, 0, 0, 0, 1, 0.1, 1.4, 0)
+mesh = SubResource("BoxMesh_chunk")
+
+[node name="Chunk" type="MeshInstance3D" parent="Ruins/Broken3"]
+transform = Transform3D(0.94, -0.342, 0, 0.342, 0.94, 0, 0, 0, 1, 0.1, 1.4, 0)
+mesh = SubResource("BoxMesh_chunk")
+
+[node name="Chunk" type="MeshInstance3D" parent="Ruins/Broken4"]
+transform = Transform3D(0.94, -0.342, 0, 0.342, 0.94, 0, 0, 0, 1, 0.1, 1.4, 0)
+mesh = SubResource("BoxMesh_chunk")
+
+[node name="ArchALeft" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9, 2.3, -6.0)
+mesh = SubResource("BoxMesh_arch_pillar")
+
+[node name="ArchARight" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.9, 2.3, -6.0)
+mesh = SubResource("BoxMesh_arch_pillar")
+
+[node name="ArchATop" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 4.9, -6.0)
+mesh = SubResource("BoxMesh_lintel")
+
+[node name="ArchBLeft" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.1, 2.3, -25.0)
+mesh = SubResource("BoxMesh_arch_pillar")
+
+[node name="ArchBRight" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.9, 2.3, -25.0)
+mesh = SubResource("BoxMesh_arch_pillar")
+
+[node name="ArchBTop" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.0, 4.9, -25.0)
+mesh = SubResource("BoxMesh_lintel")
+
+[node name="Torches" type="Node3D" parent="."]
+
+[node name="TorchE1West" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0, -13)
+
+[node name="TorchE1East" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, -13)
+
+[node name="TorchPath" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -19)
+
+[node name="TorchE2West" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -36)
+
+[node name="TorchE2East" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.5, 0, -35)
+
+[node name="TorchE3West" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -50)
+
+[node name="TorchE3East" parent="Torches" instance=ExtResource("15_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0, -50)
+
+[node name="Rail" type="Path3D" parent="."]
+curve = SubResource("Curve3D_rail")
+
+[node name="Encounters" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Encounter1" type="Node3D" parent="Encounters"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -9)
+script = ExtResource("10_encounter")
+waves = Array[ExtResource("11_wave_script")]([ExtResource("12_wave1")])
+
+[node name="Spawn0" type="Marker3D" parent="Encounters/Encounter1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -4.5)
+
+[node name="Spawn1" type="Marker3D" parent="Encounters/Encounter1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5.5)
+
+[node name="Spawn2" type="Marker3D" parent="Encounters/Encounter1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -4.5)
+
+[node name="Encounter2" type="Node3D" parent="Encounters"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -29)
+script = ExtResource("10_encounter")
+waves = Array[ExtResource("11_wave_script")]([ExtResource("13_wave2")])
+
+[node name="Spawn0" type="Marker3D" parent="Encounters/Encounter2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -4.5)
+
+[node name="Spawn1" type="Marker3D" parent="Encounters/Encounter2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -4.5)
+
+[node name="Spawn2" type="Marker3D" parent="Encounters/Encounter2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -9)
+
+[node name="Spawn3" type="Marker3D" parent="Encounters/Encounter2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -9)
+
+[node name="Encounter3" type="Node3D" parent="Encounters"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -42)
+script = ExtResource("10_encounter")
+waves = Array[ExtResource("11_wave_script")]([ExtResource("14_wave3")])
+
+[node name="Spawn0" type="Marker3D" parent="Encounters/Encounter3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5.5)
+
+[node name="Spawn1" type="Marker3D" parent="Encounters/Encounter3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -4.5)
+
+[node name="Spawn2" type="Marker3D" parent="Encounters/Encounter3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -4.5)
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+unique_name_in_owner = true
+
+[node name="CameraRig" type="Camera3D" parent="." node_paths=PackedStringArray("player")]
+unique_name_in_owner = true
+current = true
+fov = 62.0
+script = ExtResource("7_camera")
+player = NodePath("../Player")
+
+[node name="RailController" type="Node" parent="." node_paths=PackedStringArray("path")]
+unique_name_in_owner = true
+script = ExtResource("3_rail")
+path = NodePath("../Rail")
+
+[node name="AttackTokenManager" type="Node" parent="."]
+script = ExtResource("5_tokens")
+data = ExtResource("6_token_data")
+
+[node name="WaveSpawner" type="Node" parent="." node_paths=PackedStringArray("enemies_root", "token_manager")]
+unique_name_in_owner = true
+script = ExtResource("4_spawner")
+enemies_root = NodePath("../Enemies")
+token_manager = NodePath("../AttackTokenManager")
+
+[node name="GameFeel" type="Node" parent="."]
+script = ExtResource("16_feel")
+data = ExtResource("17_feel_data")
+
+[node name="DamageNumbers" type="Node3D" parent="."]
+script = ExtResource("8_numbers")
+
+[node name="HUD" parent="." instance=ExtResource("9_hud")]
+unique_name_in_owner = true

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="AttackTokenData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/attack_token_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+interval_min = 1.0
+interval_max = 2.0

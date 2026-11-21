@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/main/main_menu.gd" id="1_menu"]
+[ext_resource type="PackedScene" path="res://ui/upgrade_shop/upgrade_shop.tscn" id="2_shop"]
+[ext_resource type="Resource" path="res://data/upgrades/sword.tres" id="3_sword"]
+[ext_resource type="Resource" path="res://data/upgrades/armor.tres" id="4_armor"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+shop_scene = ExtResource("2_shop")
+sword_upgrade = ExtResource("3_sword")
+armor_upgrade = ExtResource("4_armor")

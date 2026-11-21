@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Besteiro"
+max_health = 30.0
+attack_damage = 8.0
+body_color = Color(0.2, 0.3, 0.17, 1)
+body_scale = 0.95
+model_variant = 1
+gold_reward = 12
+attack_kind = 1
+strikes_per_attack = 1
+telegraph_time = 0.8
+strike_active_time = 0.1
+recover_time = 0.8
+projectile_flight_time = 0.35
+engage_distance = 8.0
+position_tolerance = 0.5
+move_speed = 1.5
+separation_radius = 1.4
+stun_time = 1.5
+spawn_time = 1.0

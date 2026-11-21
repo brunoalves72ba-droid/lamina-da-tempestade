@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="PlayerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/player_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+max_health = 100.0
+damage_reduction = 0.0
+encounter_heal_fraction = 0.2
+input_buffer_time = 0.2
+combo_reset_time = 0.6
+melee_range = 2.5
+parry_window = 0.25
+parry_recovery = 0.4
+counter_multiplier = 2.0
+bolt_damage_multiplier = 0.5
+bolt_cooldown = 1.5
+bolt_cast_time = 0.12
+dash_duration = 0.3
+dash_max_distance = 12.0
+dash_stop_distance = 1.8
+charge_max = 100.0
+charge_combo_hit = 4.0
+charge_parry = 20.0
+charge_counter = 10.0
+charge_power_hit = 5.0
+charge_damage_loss = 10.0
+hurt_time = 0.3

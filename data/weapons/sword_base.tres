@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Espada"
+base_damage = 10.0
+element = 0
+combo_multipliers = Array[float]([1.0, 1.0, 1.6])
+heavy_hits = Array[int]([2])
+hit_windup = 0.1
+hit_active = 0.1
+hit_recovery = 0.3
+final_hit_recovery = 0.45

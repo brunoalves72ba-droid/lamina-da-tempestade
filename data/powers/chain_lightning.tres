@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/power_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+kind = 1
+display_name = "Corrente em Cadeia"
+cooldown = 10.0
+charge_cost = 0.0
+cast_time = 0.2
+recovery_time = 0.3
+requires_melee = false
+is_heavy = false
+damage_multiplier = 1.5
+chain_multipliers = Array[float]([1.5, 1.2, 1.0, 0.8])
+chain_range = 6.0
+area_multiplier = 0.0
+area_radius = 0.0

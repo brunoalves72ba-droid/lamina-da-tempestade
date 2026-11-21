@@ -1,0 +1,214 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/hud/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.06, 0.06, 0.08, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.25, 0.3, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_fill"]
+bg_color = Color(0.75, 0.2, 0.18, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_target_fill"]
+bg_color = Color(0.55, 0.12, 0.38, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_charge_fill"]
+bg_color = Color(0.45, 0.78, 1, 1)
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PlayerPanel" type="VBoxContainer" parent="Root"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 344.0
+offset_bottom = 160.0
+mouse_filter = 2
+
+[node name="PlayerTitle" type="Label" parent="Root/PlayerPanel"]
+layout_mode = 2
+text = "Herói"
+
+[node name="PlayerHealthBar" type="ProgressBar" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_player_fill")
+value = 100.0
+show_percentage = false
+
+[node name="PlayerHealthLabel" type="Label" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100 / 100"
+
+[node name="ChargeBar" type="ProgressBar" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_charge_fill")
+show_percentage = false
+
+[node name="ChargeLabel" type="Label" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Carga Estática 0 / 100"
+
+[node name="ElementLabel" type="Label" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+
+[node name="TargetPanel" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 24.0
+offset_right = 200.0
+offset_bottom = 80.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="TargetName" type="Label" parent="Root/TargetPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Alvo"
+horizontal_alignment = 1
+
+[node name="TargetHealthBar" type="ProgressBar" parent="Root/TargetPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_target_fill")
+value = 100.0
+show_percentage = false
+
+[node name="GoldLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_top = 52.0
+offset_right = -24.0
+offset_bottom = 78.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
+horizontal_alignment = 2
+
+[node name="EncounterLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 50.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.85, 0.8, 0.65, 1)
+horizontal_alignment = 2
+
+[node name="PowerSlots" type="HBoxContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -440.0
+offset_top = -184.0
+offset_right = -24.0
+offset_bottom = -56.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="Feedback" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.74
+anchor_right = 0.5
+anchor_bottom = 0.74
+offset_left = -420.0
+offset_top = -40.0
+offset_right = 420.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 52
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BoltLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -112.0
+offset_right = 600.0
+offset_bottom = -86.0
+grow_vertical = 0
+text = "Dardo de Raio: pronto"
+
+[node name="StateLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -84.0
+offset_right = 600.0
+offset_bottom = -58.0
+grow_vertical = 0
+text = "Herói: Pronto"
+
+[node name="Help" type="Label" parent="Root"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -48.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.75, 0.75, 0.8, 1)
+text = "LMB / J: atacar   ·   RMB / K: parry (quando o anel fechar)   ·   A / D ou roda: alvo   ·   1 / 2 / 3: poderes   ·   Esc: pausa"
+horizontal_alignment = 1

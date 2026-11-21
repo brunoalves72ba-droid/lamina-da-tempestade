@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/menus/result_screen.gd" id="1_result"]
+[ext_resource type="PackedScene" path="res://ui/upgrade_shop/upgrade_shop.tscn" id="2_shop"]
+
+[node name="ResultScreen" type="CanvasLayer"]
+process_mode = 3
+layer = 20
+script = ExtResource("1_result")
+shop_scene = ExtResource("2_shop")

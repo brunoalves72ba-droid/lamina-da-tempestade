@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WaveData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/wave_data.gd" id="1_wave"]
+[ext_resource type="Script" path="res://scripts/resources/spawn_entry.gd" id="2_entry"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="3_scene"]
+[ext_resource type="Resource" path="res://data/enemies/soldier.tres" id="4_soldier"]
+[ext_resource type="Resource" path="res://data/enemies/elite.tres" id="5_elite"]
+
+[sub_resource type="Resource" id="Resource_e1"]
+script = ExtResource("2_entry")
+enemy_scene = ExtResource("3_scene")
+enemy_data = ExtResource("5_elite")
+element = 3
+spawn_point = 0
+
+[sub_resource type="Resource" id="Resource_s1"]
+script = ExtResource("2_entry")
+enemy_scene = ExtResource("3_scene")
+enemy_data = ExtResource("4_soldier")
+element = 1
+spawn_point = 1
+
+[sub_resource type="Resource" id="Resource_s2"]
+script = ExtResource("2_entry")
+enemy_scene = ExtResource("3_scene")
+enemy_data = ExtResource("4_soldier")
+element = 2
+spawn_point = 2
+
+[resource]
+script = ExtResource("1_wave")
+spawns = Array[ExtResource("2_entry")]([SubResource("Resource_e1"), SubResource("Resource_s1"), SubResource("Resource_s2")])

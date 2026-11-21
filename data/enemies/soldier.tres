@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Soldado"
+max_health = 40.0
+attack_damage = 12.0
+body_color = Color(0.42, 0.13, 0.12, 1)
+body_scale = 1.0
+model_variant = 0
+gold_reward = 10
+attack_kind = 0
+strikes_per_attack = 1
+telegraph_time = 0.8
+strike_active_time = 0.1
+recover_time = 0.6
+projectile_flight_time = 0.35
+engage_distance = 2.0
+position_tolerance = 0.5
+move_speed = 2.5
+separation_radius = 1.4
+stun_time = 1.5
+spawn_time = 1.0

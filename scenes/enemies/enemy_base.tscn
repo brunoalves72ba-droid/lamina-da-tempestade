@@ -1,0 +1,284 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://data/enemies/soldier.tres" id="2_data"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="3_health"]
+[ext_resource type="Script" path="res://scripts/components/hurtbox.gd" id="4_hurtbox"]
+[ext_resource type="Script" path="res://scripts/components/hitbox.gd" id="5_hitbox"]
+[ext_resource type="Script" path="res://scripts/components/state_machine.gd" id="6_machine"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_idle.gd" id="7_idle"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_telegraph.gd" id="8_telegraph"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_strike.gd" id="9_strike"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_recover.gd" id="10_recover"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_stunned.gd" id="11_stunned"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_dead.gd" id="12_dead"]
+[ext_resource type="PackedScene" path="res://scenes/combat/telegraph_indicator.tscn" id="13_indicator"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_spawn.gd" id="14_spawn"]
+[ext_resource type="PackedScene" path="res://scenes/combat/enemy_projectile.tscn" id="15_projectile"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iron"]
+albedo_color = Color(0.2, 0.2, 0.22, 1)
+metallic = 0.7
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mail"]
+albedo_color = Color(0.28, 0.28, 0.3, 1)
+metallic = 0.6
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leather"]
+albedo_color = Color(0.13, 0.09, 0.06, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wood"]
+albedo_color = Color(0.3, 0.2, 0.12, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
+albedo_color = Color(0.3, 0.24, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bone"]
+albedo_color = Color(0.85, 0.8, 0.65, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_torso"]
+top_radius = 0.34
+bottom_radius = 0.3
+height = 0.66
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_skirt"]
+material = SubResource("StandardMaterial3D_mail")
+top_radius = 0.3
+bottom_radius = 0.38
+height = 0.34
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_leg"]
+material = SubResource("StandardMaterial3D_leather")
+radius = 0.13
+height = 0.78
+
+[sub_resource type="SphereMesh" id="SphereMesh_shoulder"]
+material = SubResource("StandardMaterial3D_iron")
+radius = 0.17
+height = 0.34
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_arm"]
+material = SubResource("StandardMaterial3D_mail")
+radius = 0.08
+height = 0.62
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+material = SubResource("StandardMaterial3D_skin")
+radius = 0.17
+height = 0.34
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_helmet"]
+material = SubResource("StandardMaterial3D_iron")
+top_radius = 0.17
+bottom_radius = 0.21
+height = 0.26
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+material = SubResource("StandardMaterial3D_iron")
+size = Vector3(0.1, 0.03, 1.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_stock"]
+material = SubResource("StandardMaterial3D_wood")
+size = Vector3(0.07, 0.08, 0.75)
+
+[sub_resource type="BoxMesh" id="BoxMesh_limbs"]
+material = SubResource("StandardMaterial3D_wood")
+size = Vector3(0.85, 0.05, 0.06)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_shield"]
+material = SubResource("StandardMaterial3D_wood")
+top_radius = 0.34
+bottom_radius = 0.34
+height = 0.06
+
+[sub_resource type="SphereMesh" id="SphereMesh_boss"]
+material = SubResource("StandardMaterial3D_iron")
+radius = 0.08
+height = 0.16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_horn"]
+material = SubResource("StandardMaterial3D_bone")
+top_radius = 0.0
+bottom_radius = 0.05
+height = 0.32
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hurtbox"]
+radius = 0.45
+height = 1.9
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hitbox"]
+size = Vector3(1.4, 1.4, 1.8)
+
+[node name="Enemy" type="CharacterBody3D"]
+collision_layer = 0
+motion_mode = 1
+script = ExtResource("1_enemy")
+data = ExtResource("2_data")
+projectile_scene = ExtResource("15_projectile")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Model" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Model"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.22, 0)
+mesh = SubResource("CylinderMesh_torso")
+
+[node name="Skirt" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.76, 0)
+mesh = SubResource("CylinderMesh_skirt")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.39, 0)
+mesh = SubResource("CapsuleMesh_leg")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0.39, 0)
+mesh = SubResource("CapsuleMesh_leg")
+
+[node name="ShoulderL" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1.15, 0, 0, 0, 0.75, 0, 0, 0, 1.15, -0.38, 1.5, 0)
+mesh = SubResource("SphereMesh_shoulder")
+
+[node name="ShoulderR" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1.15, 0, 0, 0, 0.75, 0, 0, 0, 1.15, 0.38, 1.5, 0)
+mesh = SubResource("SphereMesh_shoulder")
+
+[node name="ArmL" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 1.2, 0)
+mesh = SubResource("CapsuleMesh_arm")
+
+[node name="ArmR" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 1.2, 0)
+mesh = SubResource("CapsuleMesh_arm")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
+mesh = SubResource("SphereMesh_head")
+
+[node name="Helmet" type="MeshInstance3D" parent="Model"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, 0)
+mesh = SubResource("CylinderMesh_helmet")
+
+[node name="Horns" type="Node3D" parent="Model"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="HornL" type="MeshInstance3D" parent="Model/Horns"]
+transform = Transform3D(0.819, -0.574, 0, 0.574, 0.819, 0, 0, 0, 1, -0.2, 1.98, 0)
+mesh = SubResource("CylinderMesh_horn")
+
+[node name="HornR" type="MeshInstance3D" parent="Model/Horns"]
+transform = Transform3D(0.819, 0.574, 0, -0.574, 0.819, 0, 0, 0, 1, 0.2, 1.98, 0)
+mesh = SubResource("CylinderMesh_horn")
+
+[node name="Shield" type="Node3D" parent="Model"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.47, 1.15, -0.18)
+
+[node name="ShieldBoard" type="MeshInstance3D" parent="Model/Shield"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("CylinderMesh_shield")
+
+[node name="ShieldBoss" type="MeshInstance3D" parent="Model/Shield"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.04)
+mesh = SubResource("SphereMesh_boss")
+
+[node name="WeaponPivot" type="Node3D" parent="Model"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.2, -0.2)
+
+[node name="WeaponMesh" type="MeshInstance3D" parent="Model/WeaponPivot"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.6)
+mesh = SubResource("BoxMesh_weapon")
+
+[node name="Crossbow" type="Node3D" parent="Model/WeaponPivot"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Stock" type="MeshInstance3D" parent="Model/WeaponPivot/Crossbow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.3)
+mesh = SubResource("BoxMesh_stock")
+
+[node name="Limbs" type="MeshInstance3D" parent="Model/WeaponPivot/Crossbow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.62)
+mesh = SubResource("BoxMesh_limbs")
+
+[node name="StunLabel" type="Label3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.88, 0.35, 1)
+text = "ATORDOADO"
+font_size = 64
+outline_size = 12
+
+[node name="TelegraphIndicator" parent="." instance=ExtResource("13_indicator")]
+unique_name_in_owner = true
+
+[node name="Hurtbox" type="Area3D" parent="."]
+unique_name_in_owner = true
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("4_hurtbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("CapsuleShape3D_hurtbox")
+
+[node name="Hitbox" type="Area3D" parent="."]
+unique_name_in_owner = true
+collision_layer = 16
+collision_mask = 2
+script = ExtResource("5_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -1.2)
+shape = SubResource("BoxShape3D_hitbox")
+
+[node name="HealthComponent" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_health")
+
+[node name="StateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_state")]
+unique_name_in_owner = true
+script = ExtResource("6_machine")
+initial_state = NodePath("Spawn")
+
+[node name="Spawn" type="Node" parent="StateMachine"]
+script = ExtResource("14_spawn")
+
+[node name="Idle" type="Node" parent="StateMachine"]
+script = ExtResource("7_idle")
+
+[node name="Telegraph" type="Node" parent="StateMachine"]
+script = ExtResource("8_telegraph")
+
+[node name="Strike" type="Node" parent="StateMachine"]
+script = ExtResource("9_strike")
+
+[node name="Recover" type="Node" parent="StateMachine"]
+script = ExtResource("10_recover")
+
+[node name="Stunned" type="Node" parent="StateMachine"]
+script = ExtResource("11_stunned")
+
+[node name="Dead" type="Node" parent="StateMachine"]
+script = ExtResource("12_dead")
