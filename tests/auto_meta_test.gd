@@ -26,6 +26,7 @@ func _ready() -> void:
 	await _test_upgrades_applied()
 	await _test_death_respawn()
 	await _test_pause()
+	await _test_world_events()
 	GameState.reset()
 	print("\n%s — %d falha(s)" % ["META OK" if _failures == 0 else "META FALHOU", _failures])
 	get_tree().quit(0 if _failures == 0 else 1)
@@ -249,6 +250,49 @@ func _test_pause() -> void:
 	menu._resume()
 	_check(not get_tree().paused, "Continuar descongela")
 	await get_tree().process_frame
+
+
+## Eventos dinâmicos: socorro ao cavaleiro (salvar dá reputação e ouro), mundo aberto e preços.
+func _test_world_events() -> void:
+	print("
+[Mundo aberto, eventos e reputação]")
+	GameState.reset()
+	var level := _spawn_trail()
+	level.dynamic_events = false
+	level.events.enabled = false
+	await get_tree().create_timer(1.0).timeout
+	_check(level.side_areas.size() == 4, "4 vales laterais abertos para explorar")
+	var area := level.side_areas[0]
+	var floor_height := level.terrain.height_at(area.x, area.z)
+	var route_height := level.route_point(level.progress_of(area)).y
+	_check(absf(floor_height - route_height) < 6.0, "área lateral é chão andável, não penhasco (%.1f m)" % (floor_height - route_height))
+	_check(level.events.start_event(EventDirector.Kind.RESCUE_KNIGHT), "começa um pedido de socorro")
+	var npc := level.get_node_or_null(^"Npc") as WorldNpc
+	_check(npc != null and npc.is_alive(), "o cavaleiro aparece no lugar do evento")
+	var attackers := level.events._enemies.duplicate()
+	_check(attackers.size() >= 3 and (attackers[0] as Enemy).target == npc, "inimigos cercam o cavaleiro")
+	await get_tree().create_timer(1.6).timeout  # terminam de surgir (invulneráveis até lá)
+	var gold := GameState.gold
+	for enemy: Enemy in attackers:
+		var info := DamageInfo.new()
+		info.amount = 99999.0
+		info.source = level.player
+		enemy.hurtbox.receive_hit(info)
+	await get_tree().create_timer(0.3).timeout
+	_check(not level.events.is_active() and GameState.reputation_of(&"ordem_grifo") == 12, "salvar o cavaleiro dá reputação com a Ordem (+12)")
+	_check(GameState.gold > gold, "e ouro de recompensa")
+	GameState.change_reputation(&"guilda_mercadores", 100)
+	_check(GameState.price_of(SWORD) < SWORD.cost_for_next(GameState.level_of(SWORD)), "reputação alta com a Guilda baixa os preços")
+	GameState.change_reputation(&"guilda_mercadores", -200)
+	_check(GameState.price_of(SWORD) > SWORD.cost_for_next(GameState.level_of(SWORD)), "reputação baixa encarece")
+	GameState.change_reputation(&"ordem_grifo", -100)
+	var kinds := {}
+	for i: int in 40:
+		kinds[level.events._pick_kind()] = true
+	_check(not kinds.has(EventDirector.Kind.RESCUE_KNIGHT), "Ordem hostil não pede mais ajuda")
+	level.queue_free()
+	await get_tree().process_frame
+	GameState.reset()
 
 
 func _spawn_trail() -> WorldLevel:

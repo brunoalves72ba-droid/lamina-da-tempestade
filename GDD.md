@@ -379,7 +379,7 @@ Objetivo: transformar o percurso linear num **mundo aberto medieval sombrio** (l
 |---|---|---|
 | A. Base | Object Pooling (`Pools`), `AudioManager` com canais limitados, save v2 com auto-save e Continuar da última fogueira, arcos de história com objetivo e narração na HUD, mira híbrida (assistida/livre, tecla **T**), reputação (dados), New Game+ (dados) | ✅ feito |
 | B. Visual e combate | Shader de raio HDR (núcleo, halo, plasma, ramificações) com luz pulsante e Glow; dia/noite e clima (chuva, tempestade com raios distantes); Eletrocutado; condução por poças, armaduras e armas caídas; crateras com fumaça e brasas; choque de espadas com clarão; gore estilizado (sangue, desmembramento) e câmera lenta no último inimigo de cada onda | ✅ feito |
-| C. IA e mundo | Inimigos demoníacos (shader de corrupção, olhos brilhantes, aura), IA de flanco/investida/defesa/contra-ataque, hordas por arco, mapa aberto, eventos dinâmicos (emboscadas, mercadores pedindo socorro, patrulhas), efeito da reputação em NPCs/missões/preços | a fazer |
+| C. IA e mundo | Inimigos demoníacos (corrupção com veias e rachaduras de brasa, olhos, aura); IA com cerco/flanco, investida, defesa com escudo e contra-ataque; até 3 atacantes simultâneos conforme o arco/New Game+; 4 vales laterais abertos e vale principal mais largo; eventos dinâmicos com NPCs; reputação mudando falas, pedidos de socorro e preços | ✅ feito (mapa ainda é o vale da trilha ampliado, não um mundo aberto completo) |
 | D. Fluxo e loja | Menu título (Novo Jogo, Continuar, Configurações, Sair), tela de carregamento com progresso real e dicas, introdução e cutscenes de marco, encerramento, loja unificada (espadas, armaduras, poderes), Arena de Hordas | a fazer |
 
 **Campanha (Fase A):** 4 arcos em `data/story/` — *A Trilha dos Corvos*, *A Ponte de Pedra* (Grom), *O Bosque Morto* (Mutante), *O Santuário das Tempestades* (Guardião). Cada arco narra a abertura, mostra um objetivo por vez e, ao terminar, narra o encerramento, dá ouro e reputação e salva. Protagonista: Kael, último cavaleiro da Ordem do Grifo de Prata; inimigo: a Mácula.
@@ -390,6 +390,16 @@ Objetivo: transformar o percurso linear num **mundo aberto medieval sombrio** (l
 - *Clima:* hora avança (1 dia = 10 min, começa às 20h30). À noite os inimigos se revezam até 35% mais rápido e batem até 15% mais forte. Limpo/Chuva/Tempestade mudam a cada 70–150 s; na **Tempestade** os poderes de raio ficam **+30%** e caem raios distantes. A HUD mostra o clima.
 - *Gore* (`GameState.gore_enabled`, salvo; opção de menu na Fase D): morte por espada deixa sangue no chão e, em golpe forte/crítico (ou 35% das vezes), arranca cabeça ou antebraço com jorro e pedaços; morte por raio desintegra em cinzas. Chefões não são desmembrados.
 - *Desempenho medido* (Iris Xe, Baixo, 1280×720, tempestade forçada): mediana ~62 FPS, mínimo ~52.
+
+**Fase C — regras:**
+- *Cerco:* corpo a corpo em grupo se espalha num arco de 220° à frente do herói (do lado oposto à câmera) em vez de esperar todo na frente.
+- *Investida:* Parasita (45%), Grom (30%), Mutante (50%) e Guardião (25%) correm em linha reta de longe (≥3,5–4 m) e golpeiam na chegada, com o mesmo aviso no chão.
+- *Defesa:* o Esqueleto ergue o escudo quando o herói começa um golpe (35%): golpes leves causam 25%; golpe forte quebra a guarda. Ao baixar a guarda depois de defender, contra-ataca (50%) com aviso mais curto (60%).
+- *Hordas:* atacantes simultâneos = 1, +1 a partir do 3º arco, +1 no New Game+ (máx. 3).
+- *Mundo aberto:* vales laterais nos metros 64, 112, 158 e 203 da trilha (48 m, terminam numa área aberta de ~20 m); o vale principal ficou mais largo.
+- *Eventos (a cada 40–80 s, fora das clareiras):* Emboscada; Cavaleiro da Ordem cercado; Mercador da Guilda atacado; Patrulha sombria. Coluna de luz no local e linha na HUD com a distância. Salvar o NPC: +12 de reputação e ouro (40 + 20 por arco); NPC morto: −6; afastar-se >85 m por 30 s: −4. Facção com reputação ≤ −40 não pede mais socorro. Fala de agradecimento muda conforme a reputação. Preços do Ferreiro: −15% a +15% pela Guilda.
+- *NPCs:* usam o modelo do Paladino com contorno colorido e nome (modelos próprios de civis ficam para depois).
+- *Desempenho:* mediana ~65 FPS, mínimo ~57 (Iris Xe, Baixo, luta com chefão).
 
 **Facções (reputação −100 a 100):** Ordem do Grifo de Prata, Guilda dos Mercadores (preços −15% a +15%), Vilarejo de Pedra-Cinza.
 

@@ -18,6 +18,7 @@
 [ext_resource type="Script" path="res://scripts/enemies/states/enemy_stagger.gd" id="16_stagger"]
 [ext_resource type="Script" path="res://scripts/characters/animated_body.gd" id="90_body"]
 [ext_resource type="Script" path="res://scripts/enemies/states/enemy_power.gd" id="17_power"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_block.gd" id="18_block"]
 [ext_resource type="AnimationLibrary" path="res://assets/characters/animations/combat_library.res" id="92_anims"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
@@ -118,3 +119,6 @@ script = ExtResource("16_stagger")
 
 [node name="Power" type="Node" parent="StateMachine"]
 script = ExtResource("17_power")
+
+[node name="Block" type="Node" parent="StateMachine"]
+script = ExtResource("18_block")

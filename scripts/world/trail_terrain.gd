@@ -17,7 +17,7 @@ extends Node3D
 @export var path_falloff: float = 3.0
 @export var mud_half_width: float = 1.8
 @export var mud_falloff: float = 1.6
-@export var valley_half_width: float = 11.0
+@export var valley_half_width: float = 14.0
 @export var valley_falloff: float = 9.0
 @export var cliff_height: float = 13.0
 @export var bump_height: float = 1.1
@@ -26,6 +26,11 @@ extends Node3D
 
 @export_group("Clareiras")
 @export var clearing_radius: float = 10.0
+@export_group("Vales laterais")
+@export var side_path_half_width: float = 2.5
+@export var side_valley_half_width: float = 9.0
+@export var side_area_radius: float = 20.0
+@export_group("")
 @export var clearing_valley_radius: float = 19.0
 @export var clearing_mud_radius: float = 5.0
 
@@ -62,9 +67,13 @@ func route_points(spacing: float) -> PackedVector3Array:
 
 
 ## Gera tudo. `clearings` = centros das clareiras (no plano; a altura vem da trilha mais próxima).
-func build(clearings: Array[Vector3]) -> void:
+## `side_paths` = vales laterais (pontos com altura) que saem da trilha e terminam numa área aberta.
+func build(clearings: Array[Vector3], side_paths: Array[PackedVector3Array] = []) -> void:
 	var stamps := route_points(stamp_spacing)
-	_allocate_grid(stamps)
+	var all_points := stamps.duplicate()
+	for path: PackedVector3Array in side_paths:
+		all_points.append_array(path)
+	_allocate_grid(all_points)
 	var count := _width * _depth
 	var core := PackedFloat32Array()
 	var valley := PackedFloat32Array()
@@ -82,6 +91,14 @@ func build(clearings: Array[Vector3]) -> void:
 		var with_height := _nearest_stamp(center, stamps)
 		_stamp(with_height, clearing_radius, path_falloff, clearing_valley_radius, valley_falloff,
 				clearing_mud_radius, mud_falloff, core, valley, mud, base, best)
+	for path: PackedVector3Array in side_paths:
+		for point: Vector3 in path:
+			_stamp(point, side_path_half_width, path_falloff, side_valley_half_width, valley_falloff,
+					mud_half_width * 0.6, mud_falloff, core, valley, mud, base, best)
+		if not path.is_empty():
+			# Área aberta no fim do vale lateral.
+			_stamp(path[path.size() - 1], clearing_radius, path_falloff, side_area_radius, valley_falloff,
+					clearing_mud_radius * 0.6, mud_falloff, core, valley, mud, base, best)
 	_heights = PackedFloat32Array()
 	_heights.resize(count)
 	for z: int in _depth:

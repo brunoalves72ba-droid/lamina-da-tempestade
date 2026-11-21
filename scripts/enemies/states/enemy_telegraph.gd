@@ -7,7 +7,7 @@ var _launched: bool = false
 
 
 func enter(_msg: Dictionary = {}) -> void:
-	_timer = enemy.data.telegraph_time
+	_timer = enemy.telegraph_duration()
 	_launched = false
 	enemy.begin_telegraph()
 

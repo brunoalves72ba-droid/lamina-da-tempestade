@@ -69,6 +69,11 @@ func _ready() -> void:
 	Events.aim_mode_changed.connect(func(mode: int) -> void:
 		show_feedback("MIRA LIVRE" if mode == GameState.AimMode.FREE else "MIRA ASSISTIDA", READY_COLOR))
 	_build_boss_panel()
+	Events.reputation_feedback.connect(func(faction_name: String, amount: int, gold: int) -> void:
+		var text := "%s %+d" % [faction_name.to_upper(), amount]
+		if gold > 0:
+			text += "   +%d OURO" % gold
+		show_feedback(text, READY_COLOR if amount > 0 else DANGER_COLOR))
 	story = StoryOverlay.new()
 	story.name = "StoryOverlay"
 	$Root.add_child(story)
@@ -169,6 +174,8 @@ func _process(_delta: float) -> void:
 
 
 func bind_player(player: Player) -> void:
+	if story != null:
+		story.hero = player
 	_player = player
 	player.health.health_changed.connect(_on_player_health_changed)
 	player.parry_succeeded.connect(_on_player_parried)

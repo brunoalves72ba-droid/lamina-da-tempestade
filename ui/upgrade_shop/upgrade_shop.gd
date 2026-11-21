@@ -59,7 +59,7 @@ func _build_row(upgrade: UpgradeData) -> Control:
 	row.add_child(MenuKit.label("%s — nível %d / %d" % [upgrade.display_name, level, upgrade.max_level()], 22))
 	var is_max := level >= upgrade.max_level()
 	row.add_child(MenuKit.label(_stat_text(upgrade, level, is_max), 16, MenuKit.MUTED_COLOR))
-	var cost := upgrade.cost_for_next(level)
+	var cost := GameState.price_of(upgrade)
 	var button_text := "Nível máximo" if is_max else "Melhorar — %d de ouro" % cost
 	var buy_button := MenuKit.button(button_text, _buy.bind(upgrade))
 	buy_button.disabled = not GameState.can_buy(upgrade)

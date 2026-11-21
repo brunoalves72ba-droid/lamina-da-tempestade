@@ -10,6 +10,7 @@ extends Node3D
 ## Qualquer personagem da Mixamo serve (mesmos nomes de ossos `mixamorig_*`).
 
 const OVERLAY_SHADER := preload("res://shaders/rim_overlay.gdshader")
+const CORRUPTION_SHADER := preload("res://shaders/corruption.gdshader")
 ## Velocidade (m/s) em que cada animação de locomoção foi gravada (medida do deslocamento original).
 const NATURAL_SPEED: Dictionary = {
 	&"walk": 1.5, &"walk_back": 1.13, &"run": 4.14, &"run_back": 4.4, &"sprint": 5.6,
@@ -51,6 +52,7 @@ var _base_rim: Color = Color.BLACK
 var _base_rim_intensity: float = 0.0
 var _flash_tween: Tween
 var _ghost_material: StandardMaterial3D
+var _corruption: ShaderMaterial
 
 
 func _ready() -> void:
@@ -290,6 +292,82 @@ func disintegrate(color: Color, duration: float = 0.6) -> void:
 	tween.tween_property(_model, "scale", Vector3(1.0, 0.02, 1.0), duration * 0.5) \
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.tween_callback(func() -> void: _model.visible = false)
+
+
+## Corrupção demoníaca (veias escuras e rachaduras de brasa pulsando) por cima do modelo.
+func set_corruption(amount: float, glow: Color) -> void:
+	if _corruption == null:
+		_corruption = ShaderMaterial.new()
+		_corruption.shader = CORRUPTION_SHADER
+		_overlay.next_pass = _corruption
+	_corruption.set_shader_parameter(&"corruption", amount)
+	_corruption.set_shader_parameter(&"glow_color", glow)
+
+
+## Olhos brilhando presos à cabeça (offset no espaço do osso; x é espelhado para o outro olho).
+func add_glowing_eyes(color: Color, offset: Vector3, size: float = 0.013) -> void:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(color.r * 2.2, color.g * 1.2, color.b * 1.2)
+	var sphere := SphereMesh.new()
+	sphere.radius = size
+	sphere.height = size * 1.4
+	sphere.radial_segments = 8
+	sphere.rings = 4
+	sphere.material = material
+	for side: float in [-1.0, 1.0]:
+		var eye := MeshInstance3D.new()
+		eye.name = "Eye"
+		eye.mesh = sphere
+		eye.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		attach(&"mixamorig_Head", eye, Transform3D(Basis.IDENTITY, Vector3(offset.x * side, offset.y, offset.z)))
+
+
+## Aura sombria: fiapos escuros subindo em volta do corpo.
+func add_dark_aura(color: Color, radius: float = 0.5, amount: int = 10) -> void:
+	var particles := CPUParticles3D.new()
+	particles.name = "DarkAura"
+	particles.amount = amount
+	particles.lifetime = 1.6
+	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	particles.emission_ring_axis = Vector3.UP
+	particles.emission_ring_radius = radius
+	particles.emission_ring_inner_radius = radius * 0.5
+	particles.emission_ring_height = 0.1
+	particles.direction = Vector3.UP
+	particles.spread = 15.0
+	particles.gravity = Vector3(0.0, 0.8, 0.0)
+	particles.initial_velocity_min = 0.2
+	particles.initial_velocity_max = 0.6
+	particles.scale_amount_min = 0.5
+	particles.scale_amount_max = 1.2
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.35, 0.6)
+	particles.mesh = quad
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	var gradient_texture := GradientTexture2D.new()
+	var soft := Gradient.new()
+	soft.set_color(0, Color(1, 1, 1, 1))
+	soft.set_color(1, Color(1, 1, 1, 0))
+	gradient_texture.gradient = soft
+	gradient_texture.fill = GradientTexture2D.FILL_RADIAL
+	gradient_texture.fill_from = Vector2(0.5, 0.5)
+	gradient_texture.fill_to = Vector2(1.0, 0.5)
+	gradient_texture.width = 32
+	gradient_texture.height = 32
+	material.albedo_texture = gradient_texture
+	particles.material_override = material
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(color.r, color.g, color.b, 0.0))
+	ramp.add_point(0.3, Color(color.r, color.g, color.b, 0.45))
+	ramp.set_color(ramp.get_point_count() - 1, Color(color.r, color.g, color.b, 0.0))
+	particles.color_ramp = ramp
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(particles)
 
 
 ## Volta ao normal depois de uma desintegração (inimigo do sandbox que renasce).

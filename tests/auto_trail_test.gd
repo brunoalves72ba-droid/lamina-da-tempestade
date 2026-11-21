@@ -39,6 +39,7 @@ func _ready() -> void:
 	get_tree().create_timer(TIMEOUT_SECONDS, true, true).timeout.connect(_on_timeout)
 	_level = TRAIL_SCENE.instantiate() as WorldLevel
 	_level.show_element_select = false
+	_level.dynamic_events = false
 	_level.capture_mouse = false
 	add_child(_level)
 	_player = _level.player

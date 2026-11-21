@@ -12,14 +12,33 @@ extends Node3D
 @export var visibility_distance: float = 75.0
 @export var clearing_keep_out: float = 12.0
 
+const SIDE_PATH_KEEP_OUT: float = 4.5
+const SIDE_AREA_KEEP_OUT: float = 9.0
 
-func scatter(clearings: Array[Vector3]) -> void:
+
+## `side_paths`: vales laterais — ficam livres de objetos no meio e ganham objetos dos lados.
+func scatter(clearings: Array[Vector3], side_paths: Array[PackedVector3Array] = []) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = random_seed
 	var total_weight := 0.0
 	for entry: PropEntry in props:
 		total_weight += entry.weight
-	var points := terrain.route_points(spacing)
+	_side_paths = side_paths
+	_scatter_along(terrain.route_points(spacing), clearings, rng, total_weight)
+	for path: PackedVector3Array in side_paths:
+		var sparse := PackedVector3Array()
+		for i: int in range(0, path.size(), maxi(1, int(spacing / 1.5))):
+			sparse.append(path[i])
+		var area_keep_out := clearings.duplicate()
+		area_keep_out.append(path[path.size() - 1])
+		_scatter_along(sparse, area_keep_out, rng, total_weight)
+
+
+var _side_paths: Array[PackedVector3Array] = []
+
+
+func _scatter_along(points: PackedVector3Array, clearings: Array[Vector3], rng: RandomNumberGenerator,
+		total_weight: float) -> void:
 	for i: int in range(1, points.size() - 1):
 		var along := (points[i + 1] - points[i - 1])
 		along.y = 0.0
@@ -31,7 +50,7 @@ func scatter(clearings: Array[Vector3]) -> void:
 			var entry := _pick(rng, total_weight)
 			var distance := rng.randf_range(entry.side_distance_min, entry.side_distance_max)
 			var position := points[i] + side * sign_value * distance + along * rng.randf_range(-spacing, spacing) * 0.5
-			if _near_clearing(position, clearings):
+			if _near_clearing(position, clearings) or _near_side_path(position):
 				continue
 			_place(entry, terrain.ground_point(position), rng)
 
@@ -43,6 +62,18 @@ func _pick(rng: RandomNumberGenerator, total_weight: float) -> PropEntry:
 		if roll <= 0.0:
 			return entry
 	return props[props.size() - 1]
+
+
+## Não bloqueia a entrada nem o leito dos vales laterais.
+func _near_side_path(position: Vector3) -> bool:
+	for path: PackedVector3Array in _side_paths:
+		for i: int in range(0, path.size(), 2):
+			if Vector2(position.x - path[i].x, position.z - path[i].z).length() < SIDE_PATH_KEEP_OUT:
+				return true
+		var end := path[path.size() - 1]
+		if Vector2(position.x - end.x, position.z - end.z).length() < SIDE_AREA_KEEP_OUT:
+			return true
+	return false
 
 
 func _near_clearing(position: Vector3, clearings: Array[Vector3]) -> bool:

@@ -30,6 +30,8 @@ const DANGER_COLOR := Color(1.0, 0.4, 0.35)
 @export var shrine_radius: float = 4.5
 @export var respawn_delay: float = 2.0
 @export var zone_clear_heal_fraction: float = 0.25
+## Eventos dinâmicos (emboscadas, pedidos de socorro, patrulhas). Testes automáticos desligam.
+@export var dynamic_events: bool = true
 
 @export_group("Patrulhas")
 @export var patrol_entry: SpawnEntry
@@ -50,11 +52,18 @@ var _zone_generation: int = 0
 var _finished: bool = false
 var _started: bool = false
 const PUDDLES_PER_ZONE: int = 2
+## Vales laterais: (metro da trilha onde começa, lado +1/-1) e comprimento.
+const SIDE_BRANCHES: Array[Vector2] = [Vector2(64.0, 1.0), Vector2(112.0, -1.0), Vector2(158.0, 1.0), Vector2(203.0, -1.0)]
+const SIDE_PATH_LENGTH: float = 48.0
+## Centros das áreas abertas no fim dos vales laterais (eventos e exploração).
+var side_areas: Array[Vector3] = []
 var _respawn_point: Vector3 = Vector3.ZERO
 ## Arcos de história, objetivo atual e narração (GDD §4.1).
 var story: StoryDirector
 ## Dia/noite e clima (GDD §9.1).
 var weather: Weather
+## Eventos dinâmicos do mundo aberto (GDD §9.3).
+var events: EventDirector
 var _pause_menu: PauseMenu
 
 @onready var player: Player = %Player
@@ -84,11 +93,14 @@ func _ready() -> void:
 	for zone: CombatZone in zones:
 		zone.global_position = route_point(zone.route_progress)
 		centers.append(zone.global_position)
-	terrain.build(centers)
+	var side_paths := _build_side_paths()
+	terrain.build(centers, side_paths)
+	for path: PackedVector3Array in side_paths:
+		side_areas.append(terrain.ground_point(path[path.size() - 1]))
 	var keep_out := centers.duplicate()
 	keep_out.append(route_point(route_length()))
 	keep_out.append(route_point(0.0))
-	_props.scatter(keep_out)
+	_props.scatter(keep_out, side_paths)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = layout_seed
 	for zone: CombatZone in zones:
@@ -113,6 +125,11 @@ func _ready() -> void:
 	_place_player(_respawn_point, route_direction(1.5))
 	_restore_saved_progress()
 	_setup_weather_and_puddles()
+	events = EventDirector.new()
+	events.name = "EventDirector"
+	events.level = self
+	events.enabled = dynamic_events
+	add_child(events)
 	story = StoryDirector.new()
 	story.name = "StoryDirector"
 	add_child(story)
@@ -296,6 +313,45 @@ func _apply_player_stats() -> void:
 		reduction = armor_upgrade.secondary_at(GameState.level_of(armor_upgrade))
 	player.apply_stats(damage + level_bonus * progression.damage_per_level,
 			max_health + level_bonus * progression.health_per_level, reduction)
+
+
+func is_running() -> bool:
+	return _started and not _finished and not player.health.is_dead
+
+
+func is_in_combat_zone() -> bool:
+	return _active_zone != null
+
+
+func is_point_in_zone(point: Vector3) -> bool:
+	for zone: CombatZone in zones:
+		if Vector2(point.x - zone.global_position.x, point.z - zone.global_position.z).length() <= zone.barrier_radius + 4.0:
+			return true
+	return false
+
+
+## Vales laterais (mundo aberto, GDD §9.2): saem da trilha em SIDE_BRANCHES e terminam numa área
+## aberta onde acontecem eventos. Curvam um pouco e sobem/descem suavemente.
+func _build_side_paths() -> Array[PackedVector3Array]:
+	var paths: Array[PackedVector3Array] = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = layout_seed + 17
+	for branch: Vector2 in SIDE_BRANCHES:
+		var progress := branch.x
+		var start := route_point(progress)
+		var heading := route_direction(progress).cross(Vector3.UP) * branch.y
+		var bend := rng.randf_range(-0.35, 0.35)
+		var rise := rng.randf_range(-1.5, 3.0)
+		var path := PackedVector3Array()
+		var point := start
+		var steps := int(SIDE_PATH_LENGTH / 1.5)
+		for i: int in steps:
+			var t := float(i) / steps
+			heading = heading.rotated(Vector3.UP, bend / steps)
+			point += heading * 1.5
+			path.append(Vector3(point.x, start.y + rise * smoothstep(0.0, 1.0, t), point.z))
+		paths.append(path)
+	return paths
 
 
 ## Clima/dia-noite (Weather) e poças d'água nas clareiras (conduzem o raio).

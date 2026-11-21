@@ -208,8 +208,14 @@ func equip_sword(id: StringName) -> void:
 		inventory_changed.emit()
 
 
-func can_buy(upgrade: UpgradeData) -> bool:
+## Preço do próximo nível, com o desconto/acréscimo da reputação na Guilda; -1 se já está no máximo.
+func price_of(upgrade: UpgradeData) -> int:
 	var cost := upgrade.cost_for_next(level_of(upgrade))
+	return -1 if cost < 0 else roundi(cost * price_multiplier())
+
+
+func can_buy(upgrade: UpgradeData) -> bool:
+	var cost := price_of(upgrade)
 	return cost >= 0 and gold >= cost
 
 
@@ -217,7 +223,7 @@ func can_buy(upgrade: UpgradeData) -> bool:
 func try_buy(upgrade: UpgradeData) -> bool:
 	if not can_buy(upgrade):
 		return false
-	gold -= upgrade.cost_for_next(level_of(upgrade))
+	gold -= price_of(upgrade)
 	_upgrade_levels[upgrade.id] = level_of(upgrade) + 1
 	gold_changed.emit(gold)
 	upgrades_changed.emit()

@@ -44,6 +44,8 @@ func _ready() -> void:
 	_player.bolt_fired.connect(_on_bolt_fired)
 	_player.dash_started.connect(_on_dash_started)
 	await _wait(_enemy.data.spawn_time + SETTLE_TIME)
+	# Números exatos de dano: o inimigo de treino não ergue o escudo (a defesa tem teste próprio).
+	_enemy.block_chance_override = 0.0
 
 	await _test_perfect_parry_and_counter()
 	await _test_early_parry()
@@ -58,10 +60,36 @@ func _ready() -> void:
 	await _test_boss_powers()
 	await _test_free_aim()
 	await _test_lightning_physics()
+	await _test_block_and_counter()
 	await _test_combo_and_kill()
 
 	print("\n%s — %d falha(s)" % ["COMBATE OK" if _failures == 0 else "COMBATE FALHOU", _failures])
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+## IA: inimigo com escudo ergue a guarda quando o herói ataca, reduz o dano e contra-ataca.
+func _test_block_and_counter() -> void:
+	print("
+[IA: defesa e contra-ataque]")
+	_sandbox.reset()
+	_enemy.block_chance_override = 1.0
+	_enemy.counter_chance_override = 1.0
+	_enemy.auto_attack = false  # sem ataque por token: só a defesa e o contra-ataque contam aqui
+	_enemy.is_aware = true
+	await _wait(0.3)
+	var hp := _enemy.health.current_health
+	_player.input_buffer.press(&"attack")
+	await _wait(_hit_land_time())
+	_check(_enemy.state_machine.is_in(&"Block") or _enemy.state_machine.is_in(&"Telegraph"), "ergue a guarda quando o herói golpeia")
+	_enemy.auto_attack = true  # o contra-ataque precisa poder atacar
+	var taken := hp - _enemy.health.current_health
+	_check(taken > 0.0 and taken < _player.weapon.base_damage * 0.5, "escudo reduz o dano (%.1f)" % taken)
+	await _wait(1.0)
+	_check(_enemy.state_machine.is_in(&"Telegraph") or _enemy.state_machine.is_in(&"Strike") 			or _enemy.state_machine.is_in(&"Recover"), "contra-ataca depois de defender")
+	await _wait(1.5)
+	_enemy.block_chance_override = 0.0
+	_enemy.counter_chance_override = -1.0
+	_sandbox.reset()
 
 
 ## Fase B: eletrocutado (lento, crítico), condução por poça, desmembramento e tempestade.

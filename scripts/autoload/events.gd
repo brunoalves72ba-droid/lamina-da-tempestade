@@ -17,6 +17,12 @@ signal boss_engaged(boss: Node3D)
 ## Pedido de tremor de câmera (impactos de chefão), de 0 a 1.
 @warning_ignore("unused_signal")
 signal shake_requested(amount: float)
+## Evento dinâmico do mundo começou (active=true) ou acabou (title vazio).
+@warning_ignore("unused_signal")
+signal world_event_changed(title: String, at: Vector3, active: bool)
+## Reputação mudou por algo que o herói fez: nome da facção, pontos (±) e ouro ganho.
+@warning_ignore("unused_signal")
+signal reputation_feedback(faction_name: String, amount: int, gold: int)
 ## Clima mudou (Weather): nome para a HUD e se é tempestade (raios mais fortes).
 @warning_ignore("unused_signal")
 signal weather_changed(weather_name: String, is_storm: bool)

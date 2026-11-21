@@ -10,6 +10,8 @@ signal hit_taken(info: DamageInfo, parry_was_early: bool)
 signal bolt_fired(target: Enemy)
 signal dash_started(from: Vector3, to: Vector3)
 signal power_denied(slot: int)
+## Um golpe de espada começou (os inimigos com escudo podem erguer a guarda).
+signal swing_started
 signal died
 
 const PARRY_FLASH_COLOR := Color(0.55, 0.85, 1.0)
@@ -544,6 +546,7 @@ func begin_swing(hit_index: int) -> void:
 	body.play_action_hit_at(anim, weapon.hit_windup + weapon.hit_active * 0.5, ACTION_SPEED)
 	_trail.emit_for(weapon.hit_windup + weapon.hit_active + 0.08)
 	SfxLibrary.play(self, &"swing")
+	swing_started.emit()
 
 
 func set_pose_rest() -> void:

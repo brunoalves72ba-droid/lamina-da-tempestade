@@ -20,6 +20,8 @@ const DISINTEGRATE_DELAY: float = 1.1
 const DISINTEGRATE_COLOR := Color(1.0, 0.55, 0.2)
 ## Chance de desmembrar numa morte por golpe normal de espada (forte/crítico: sempre).
 const DISMEMBER_CHANCE: float = 0.35
+const BLOCK_DAMAGE_FACTOR: float = 0.25
+const COUNTER_TELEGRAPH_FACTOR: float = 0.6
 const SHOCK_SLOW: float = 0.45
 const SHOCK_CRIT_MULTIPLIER: float = 1.5
 const SHOCK_ARC_INTERVAL: float = 0.09
@@ -32,6 +34,8 @@ const CAMERA_SIDE_THRESHOLD: float = 0.2
 ## Inimigo colado na câmera fica invisível (o anel de aviso no chão continua aparecendo).
 const CAMERA_HIDE_DISTANCE: float = 2.2
 const CAMERA_HIDE_HEIGHT: float = 1.0
+## Arco total (graus) em que o grupo se espalha em volta do herói.
+const FLANK_ARC_DEGREES: float = 220.0
 
 @export var data: EnemyData
 @export var projectile_scene: PackedScene
@@ -68,6 +72,14 @@ var shock_remaining: float = 0.0
 var _shock_arc_timer: float = 0.0
 var _death_timer: SceneTreeTimer
 var _death_by_power: bool = false
+## IA (GDD §8.3): investida em andamento, guarda erguida e contra-ataque pendente.
+var is_charging: bool = false
+var telegraph_override: float = -1.0
+var _blocked_hits: int = 0
+var _swing_listener_bound: bool = false
+## Sobrescreve as chances do EnemyData (-1 = usar os dados). Testes e o sandbox usam.
+var block_chance_override: float = -1.0
+var counter_chance_override: float = -1.0
 
 @onready var health: HealthComponent = %HealthComponent
 @onready var hurtbox: Hurtbox = %Hurtbox
@@ -86,6 +98,7 @@ func _ready() -> void:
 	_model.scale = Vector3.ONE * data.body_scale
 	_apply_body_scale()
 	_equip()
+	_apply_demonic_look()
 	if data.boss != null:
 		boss_brain = BossBrain.new(self, data.boss)
 		add_child(boss_brain)
@@ -127,6 +140,15 @@ func _physics_process(delta: float) -> void:
 		velocity.z /= SHOCK_SLOW
 	if not health.is_dead:
 		body.update_locomotion(global_basis.inverse() * velocity, is_aware, false)
+
+
+## A Mácula (GDD §8.2): corrupção na pele, olhos em brasa e aura escura.
+func _apply_demonic_look() -> void:
+	if data.corruption > 0.0:
+		body.set_corruption(data.corruption, data.corruption_color)
+	if data.eye_offset != Vector3.ZERO:
+		body.add_glowing_eyes(data.eye_color, data.eye_offset, 0.013 if not is_boss() else 0.02)
+	body.add_dark_aura(data.aura_color, 0.45 * data.body_scale, 14 if is_boss() else 8)
 
 
 ## Só o Soldado carrega armas (espada e escudo); os outros lutam com garras e magia.
@@ -173,6 +195,10 @@ func set_element(new_element: Element.Type) -> void:
 
 func set_target(new_target: Node3D) -> void:
 	target = new_target
+	var hero := new_target as Player
+	if hero != null and not _swing_listener_bound:
+		_swing_listener_bound = true
+		hero.swing_started.connect(_on_hero_swing)
 	_target_health = new_target.get_node_or_null(^"HealthComponent") as HealthComponent
 	_target_hurtbox = new_target.get_node_or_null(^"Hurtbox") as Hurtbox
 
@@ -214,11 +240,55 @@ func grant_attack_token() -> void:
 		state_machine.transition_to(&"Power", {"power": boss_brain.next_power()})
 		return
 	_strikes_left = data.strikes_per_attack
+	# Investida: de longe, corre em linha reta até o herói e golpeia na chegada.
+	is_charging = not is_ranged() and data.charge_chance > 0.0 \
+			and distance_to_target() >= data.charge_min_distance and randf() < data.charge_chance
 	state_machine.transition_to(&"Telegraph")
 
 
 func is_boss() -> bool:
 	return data.boss != null
+
+
+func telegraph_duration() -> float:
+	return telegraph_override if telegraph_override > 0.0 else data.telegraph_time
+
+
+# --- Defesa e contra-ataque (GDD §8.3) --------------------------------------------
+
+func is_blocking() -> bool:
+	return state_machine.is_in(&"Block")
+
+
+## O herói começou um golpe perto: inimigo com escudo, em guarda, pode erguer a defesa.
+func _on_hero_swing() -> void:
+	if health.is_dead or not state_machine.is_in(&"Idle") or not is_aware:
+		return
+	var chance := block_chance_override if block_chance_override >= 0.0 else data.block_chance
+	if distance_to_target() > data.attack_reach + 1.0 or randf() >= chance:
+		return
+	state_machine.transition_to(&"Block")
+
+
+func begin_block() -> void:
+	_blocked_hits = 0
+	body.play_action(&"block_idle")
+
+
+func end_block() -> void:
+	body.stop_action()
+
+
+## Saindo da defesa: se aparou algum golpe, pode contra-atacar na hora (aviso curto, sem token).
+func try_counter_attack() -> bool:
+	var chance := counter_chance_override if counter_chance_override >= 0.0 else data.counter_chance
+	if _blocked_hits == 0 or not can_attack() or randf() >= chance:
+		return false
+	_strikes_left = 1
+	is_charging = false
+	telegraph_override = data.telegraph_time * COUNTER_TELEGRAPH_FACTOR
+	state_machine.transition_to(&"Telegraph")
+	return true
 
 
 func is_telegraphing() -> bool:
@@ -263,13 +333,17 @@ func reset_state() -> void:
 # --- Ciclo de ataque (chamado pelos estados) --------------------------------
 
 func begin_telegraph() -> void:
-	telegraph.play(data.telegraph_time)
+	var duration := telegraph_duration()
+	telegraph.play(duration)
 	if is_ranged():
-		body.play_action_hit_at(&"shoot", data.telegraph_time - data.projectile_flight_time)
+		body.play_action_hit_at(&"shoot", duration - data.projectile_flight_time)
+	elif is_charging:
+		body.play_action(&"sprint", 1.6)
+		Vfx.sparks(get_parent(), global_position + Vector3.UP * 0.2, Color(0.4, 0.3, 0.25), 14, 4.0, 0.5)
 	else:
-		body.play_action_hit_at(data.strike_animation, data.telegraph_time)
+		body.play_action_hit_at(data.strike_animation, duration)
 	SfxLibrary.play(self, &"telegraph")
-	attack_telegraphed.emit(data.telegraph_time)
+	attack_telegraphed.emit(duration)
 
 
 ## Besteiro: o virote voa data.projectile_flight_time e chega quando o aviso termina.
@@ -285,6 +359,10 @@ func launch_projectile() -> void:
 
 func begin_strike() -> void:
 	telegraph.stop()
+	telegraph_override = -1.0
+	if is_charging:
+		body.play_action_hit_at(data.strike_animation, data.strike_active_time)
+	is_charging = false
 	strike_was_parried = false
 	if not is_ranged():
 		hitbox.arm(_build_attack_info())
@@ -389,6 +467,16 @@ func _on_hit_received(info: DamageInfo) -> void:
 		info.is_counter = true
 		info.is_heavy = true
 		_counter_consumed = true
+	if is_blocking() and not info.is_power and not info.is_heavy:
+		info.amount *= BLOCK_DAMAGE_FACTOR
+		_blocked_hits += 1
+		body.play_action(&"block_hit", 1.4)
+		Vfx.sparks(get_parent(), global_position + Vector3.UP * 1.2 * data.body_scale + global_basis.z * -0.5,
+				Color(1.0, 0.75, 0.4), 22, 7.0, 0.3)
+		SfxLibrary.play(self, &"block")
+	elif is_blocking() and info.is_heavy:
+		# Golpe forte quebra a guarda.
+		state_machine.transition_to(&"Idle")
 	if is_shocked() and not info.is_power and info.source is Player:
 		info.amount *= SHOCK_CRIT_MULTIPLIER
 		info.is_critical = true
@@ -481,7 +569,7 @@ func _desired_velocity(delta: float) -> Vector3:
 	if state_machine.is_in(&"Stagger"):
 		return _knockback * data.knockback_speed
 	if state_machine.is_in(&"Telegraph") and not is_ranged() and distance_to_target() > data.attack_reach:
-		return _flat_direction_to_target() * data.move_speed
+		return _flat_direction_to_target() * (data.charge_speed if is_charging else data.move_speed)
 	if not state_machine.is_in(&"Idle") or not is_aware:
 		return Vector3.ZERO
 	return _guard_velocity(delta)
@@ -501,11 +589,19 @@ func _guard_velocity(delta: float) -> Vector3:
 			direction += to_target
 		elif distance < data.engage_distance - half_tolerance:
 			direction -= to_target
-		_strafe_timer -= delta
-		if _strafe_timer <= 0.0:
-			_strafe_timer = randf_range(data.strafe_switch_min, data.strafe_switch_max)
-			_strafe_sign = -_strafe_sign if randf() < 0.6 else _strafe_sign
-		direction += Vector3.UP.cross(to_target) * _strafe_sign * 0.8
+		var slot := _flank_slot()
+		if slot != Vector3.ZERO:
+			# Em grupo: cada um ocupa um lugar em volta do herói (cerco), sem ficar todo na frente.
+			var wanted := target.global_position + slot * data.engage_distance - global_position
+			wanted.y = 0.0
+			if wanted.length() > 0.4:
+				direction += wanted.normalized() * minf(1.0, wanted.length() * 0.6)
+		else:
+			_strafe_timer -= delta
+			if _strafe_timer <= 0.0:
+				_strafe_timer = randf_range(data.strafe_switch_min, data.strafe_switch_max)
+				_strafe_sign = -_strafe_sign if randf() < 0.6 else _strafe_sign
+			direction += Vector3.UP.cross(to_target) * _strafe_sign * 0.8
 		direction += _away_from_camera_side(-to_target)
 	for node: Node in get_tree().get_nodes_in_group(GROUP):
 		var other := node as Enemy
@@ -517,6 +613,31 @@ func _guard_velocity(delta: float) -> Vector3:
 		if gap > 0.001 and gap < data.separation_radius:
 			direction += away / gap * (1.0 - gap / data.separation_radius) * 1.5
 	return direction.limit_length(1.0) * speed
+
+
+## Lugar no cerco (direção a partir do herói) para inimigos corpo a corpo em grupo; zero se sozinho.
+## Os lugares se espalham num arco à frente do herói (lado oposto à câmera) e giram devagar.
+func _flank_slot() -> Vector3:
+	if not data.flanks or is_ranged() or target == null:
+		return Vector3.ZERO
+	var group: Array[Enemy] = []
+	for node: Node in get_tree().get_nodes_in_group(GROUP):
+		var other := node as Enemy
+		if other != null and not other.health.is_dead and other.is_aware and not other.is_ranged() and other.data.flanks:
+			group.append(other)
+	if group.size() < 2:
+		return Vector3.ZERO
+	group.sort_custom(func(a: Enemy, b: Enemy) -> bool: return a.get_instance_id() < b.get_instance_id())
+	var index := group.find(self)
+	var camera := get_viewport().get_camera_3d()
+	var front := Vector3.FORWARD
+	if camera != null:
+		front = target.global_position - camera.global_position
+		front.y = 0.0
+		front = front.normalized() if front.length_squared() > 0.001 else Vector3.FORWARD
+	var spread := minf(deg_to_rad(FLANK_ARC_DEGREES), TAU * 0.85) / maxf(group.size() - 1, 1)
+	var angle := (index - (group.size() - 1) * 0.5) * spread + sin(Time.get_ticks_msec() / 4000.0) * 0.3
+	return front.rotated(Vector3.UP, angle)
 
 
 func _flat_direction_to_target() -> Vector3:

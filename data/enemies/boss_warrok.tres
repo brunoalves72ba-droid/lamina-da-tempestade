@@ -50,3 +50,7 @@ stagger_time = 0.3
 knockback_speed = 4.0
 spawn_time = 1.2
 boss = SubResource("Resource_boss")
+corruption = 0.7
+charge_chance = 0.3
+charge_speed = 9.0
+eye_offset = Vector3(0.05, 0.096, 0.154)

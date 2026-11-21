@@ -19,6 +19,27 @@ enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE, BOSS }
 @export var strike_animation: StringName = &"enemy_strike"
 ## Poderes de chefão; vazio para inimigos comuns.
 @export var boss: BossData
+
+@export_group("Visual demoníaco")
+## Força da corrupção (veias e rachaduras de brasa) sobre o modelo, 0..1.
+@export_range(0.0, 1.0) var corruption: float = 0.55
+@export var corruption_color: Color = Color(1.0, 0.28, 0.06)
+@export var eye_color: Color = Color(1.0, 0.2, 0.05)
+## Posição de um olho no espaço do osso da cabeça (o outro é espelhado em x); zero = sem olhos.
+@export var eye_offset: Vector3 = Vector3(0.032, 0.075, 0.095)
+@export var aura_color: Color = Color(0.12, 0.02, 0.08)
+
+@export_group("IA")
+## Investida: avança correndo e golpeia de longe (0 = não faz).
+@export var charge_chance: float = 0.0
+@export var charge_min_distance: float = 4.0
+@export var charge_speed: float = 9.0
+## Defesa: chance de erguer a guarda quando o herói ataca (só com escudo), e de contra-atacar
+## logo depois de defender.
+@export var block_chance: float = 0.0
+@export var counter_chance: float = 0.0
+## Flanqueia: em grupo, se espalha em volta do herói em vez de ficar todo na frente.
+@export var flanks: bool = true
 ## Ouro e experiência ganhos ao derrotar (GDD §8).
 @export var gold_reward: int = 10
 @export var xp_reward: int = 20
