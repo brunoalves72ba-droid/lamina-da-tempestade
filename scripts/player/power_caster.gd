@@ -6,6 +6,9 @@ extends Node
 signal power_used(slot: int)
 
 const AIM_HEIGHT: float = 1.1
+## Salto da Corrente em Cadeia a partir de inimigo com armadura de metal (×alcance).
+const METAL_CHAIN_BONUS: float = 1.6
+const STORM_SHOCK_TIME: float = 3.0
 ## Raios extras caindo em volta do alvo na Fúria da Tempestade.
 const STORM_BOLTS: int = 4
 
@@ -89,6 +92,8 @@ func _voltaic_blade(data: PowerData, target: Enemy) -> void:
 	if target.is_telegraphing():
 		target.interrupt_attack()
 	target.hurtbox.receive_hit(player.build_power_info(data.damage_multiplier, data.is_heavy))
+	Conduction.discharge(get_tree(), target.global_position, color,
+			player.build_power_info.bind(data.damage_multiplier * 0.5, false), [target])
 	player.charge.add(player.data.charge_power_hit)
 
 
@@ -109,8 +114,12 @@ func _chain_lightning(data: PowerData, target: Enemy) -> void:
 		Vfx.shockwave(parent, current.global_position, 1.3, color, 0.25)
 		current.hurtbox.receive_hit(player.build_power_info(multiplier, data.is_heavy))
 		hit.append(current)
+		hit.append_array(Conduction.discharge(get_tree(), current.global_position, color,
+				player.build_power_info.bind(multiplier, false), hit))
 		from = _aim(current)
-		current = _nearest_unhit(from, hit, data.chain_range)
+		# Armadura de metal conduz: o próximo salto alcança mais longe.
+		var reach := data.chain_range * (METAL_CHAIN_BONUS if current.is_metal_armored() else 1.0)
+		current = _nearest_unhit(from, hit, reach)
 	SfxLibrary.play(player, &"zap")
 	if not hit.is_empty():
 		player.charge.add(player.data.charge_power_hit)
@@ -134,7 +143,10 @@ func _storm_fury(data: PowerData, target: Enemy) -> void:
 	for enemy: Enemy in player.targeting.candidates():
 		if enemy != target and enemy.global_position.distance_to(ground) <= data.area_radius:
 			others.append(enemy)
-	target.hurtbox.receive_hit(player.build_power_info(data.damage_multiplier, data.is_heavy))
+	target.hurtbox.receive_hit(player.build_power_info(data.damage_multiplier, data.is_heavy, STORM_SHOCK_TIME))
+	var struck: Array[Enemy] = [target]
+	struck.append_array(others)
+	Conduction.discharge(get_tree(), ground, color, player.build_power_info.bind(data.area_multiplier, false), struck)
 	for enemy: Enemy in others:
 		LightningArc.spawn(parent, ground + Vector3.UP * 0.3, _aim(enemy), color, 0.3, 1.2)
 		Vfx.sparks(parent, _aim(enemy), color, 16, 5.0)

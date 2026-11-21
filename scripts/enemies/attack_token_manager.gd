@@ -63,5 +63,6 @@ func _release() -> void:
 	_cooldown = _random_interval()
 
 
+## À noite os inimigos se revezam mais rápido (até 35% menos espera).
 func _random_interval() -> float:
-	return randf_range(data.interval_min, data.interval_max)
+	return randf_range(data.interval_min, data.interval_max) * (1.0 - 0.35 * GameState.night_factor)

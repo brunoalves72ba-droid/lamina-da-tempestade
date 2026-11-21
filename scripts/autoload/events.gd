@@ -17,6 +17,12 @@ signal boss_engaged(boss: Node3D)
 ## Pedido de tremor de câmera (impactos de chefão), de 0 a 1.
 @warning_ignore("unused_signal")
 signal shake_requested(amount: float)
+## Clima mudou (Weather): nome para a HUD e se é tempestade (raios mais fortes).
+@warning_ignore("unused_signal")
+signal weather_changed(weather_name: String, is_storm: bool)
+## Clarão rápido na tela inteira (raio próximo, parry, impacto de chefão). strength 0..1.
+@warning_ignore("unused_signal")
+signal screen_flash_requested(color: Color, strength: float)
 ## Pedido de efeito sonoro (nome da tabela SfxLibrary.SOUNDS); o AudioManager decide o canal.
 @warning_ignore("unused_signal")
 signal sfx_requested(sound: StringName)

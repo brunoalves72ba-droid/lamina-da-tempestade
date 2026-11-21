@@ -15,6 +15,12 @@ var can_be_parried: bool = false
 var source: Node3D
 ## Chamado pelo defensor quando este golpe é aparado.
 var on_parried: Callable
+## Poder de raio (não é golpe físico de espada).
+var is_power: bool = false
+## Segundos de Eletrocutado que o golpe causa (0 = nenhum).
+var shock_time: float = 0.0
+## Marcado pelo defensor: golpe físico num alvo eletrocutado vira crítico.
+var is_critical: bool = false
 
 
 func copy() -> DamageInfo:
@@ -28,4 +34,7 @@ func copy() -> DamageInfo:
 	clone.can_be_parried = can_be_parried
 	clone.source = source
 	clone.on_parried = on_parried
+	clone.is_power = is_power
+	clone.shock_time = shock_time
+	clone.is_critical = is_critical
 	return clone

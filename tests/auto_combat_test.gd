@@ -57,10 +57,67 @@ func _ready() -> void:
 	await _test_free_movement()
 	await _test_boss_powers()
 	await _test_free_aim()
+	await _test_lightning_physics()
 	await _test_combo_and_kill()
 
 	print("\n%s — %d falha(s)" % ["COMBATE OK" if _failures == 0 else "COMBATE FALHOU", _failures])
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+## Fase B: eletrocutado (lento, crítico), condução por poça, desmembramento e tempestade.
+func _test_lightning_physics() -> void:
+	print("
+[Eletrocutado, condução, gore e tempestade]")
+	_sandbox.reset()
+	_enemy.auto_attack = false
+	await _wait(0.2)
+	var info := _player.build_power_info(0.1, false)
+	_enemy.hurtbox.receive_hit(info)
+	_check(_enemy.is_shocked(), "poder de raio deixa o inimigo eletrocutado")
+	var physical := _player.build_attack_info(0)
+	var hp := _enemy.health.current_health
+	_enemy.hurtbox.receive_hit(physical)
+	_check(physical.is_critical and is_equal_approx(hp - _enemy.health.current_health,
+			_player.weapon.base_damage * Enemy.SHOCK_CRIT_MULTIPLIER), "golpe de espada no eletrocutado é crítico")
+	await _wait(2.5)
+	_check(not _enemy.is_shocked(), "o efeito passa sozinho")
+	# Poça: um raio que cai nela eletrifica quem está dentro.
+	var puddle := Puddle.new()
+	puddle.radius = 2.0
+	_sandbox.add_child(puddle)
+	puddle.global_position = Vector3(3.0, 0.0, -6.0)
+	var wet := _sandbox.spawn_extra_enemy(SOLDIER_DATA, Vector3(3.5, 0.0, -6.0))
+	wet.auto_attack = false
+	await _wait(SOLDIER_DATA.spawn_time + 0.2)
+	wet.global_position = Vector3(3.5, 0.0, -6.0)
+	var wet_hp := wet.health.current_health
+	var conducted := Conduction.discharge(get_tree(), Vector3(2.5, 0.0, -6.0), Color.CYAN,
+			_player.build_power_info.bind(1.0, false))
+	_check(wet in conducted and wet.health.current_health < wet_hp and wet.is_shocked(), "poça conduz o raio para quem pisa nela")
+	puddle.queue_free()
+	# Gore: corte num inimigo morto por golpe forte.
+	GameState.gore_enabled = true
+	var bone := Gore.dismember(wet)
+	var severed := wet.body.skeleton.get_node_or_null(^"SeveredBones") as SeveredBones
+	_check(bone != &"" and severed != null and severed.has_severed(), "golpe forte desmembra (%s)" % bone)
+	GameState.gore_enabled = false
+	_check(Gore.dismember(wet) == &"", "com o gore desligado não há desmembramento")
+	GameState.gore_enabled = true
+	# Tempestade: raios mais fortes.
+	var calm := _player.build_power_info(1.0, false).amount
+	var weather := Weather.new()
+	add_child(weather)
+	var environment := Environment.new()
+	weather.setup(environment, null, null, null, null)
+	weather.set_state(Weather.Condition.STORM, true)
+	await _wait(0.1)
+	var stormy := _player.build_power_info(1.0, false).amount
+	_check(GameState.storm_intensity > 0.9 and stormy > calm * 1.25, "na tempestade os raios ficam ~30%% mais fortes (%.1f → %.1f)" % [calm, stormy])
+	weather.queue_free()
+	GameState.storm_intensity = 0.0
+	GameState.night_factor = 0.0
+	_sandbox.reset()
+	_enemy.auto_attack = true
 
 
 ## Mira livre: só o inimigo na mira vira alvo (sem pegar o mais próximo); assistida volta ao normal.
@@ -230,12 +287,14 @@ func _test_crossbow_targeting_and_bolt() -> void:
 	_player.input_buffer.press(&"attack")
 	await _wait(_player.data.bolt_cast_time + _player.data.dash_duration + _hit_land_time())
 	var weapon := _player.weapon
-	var expected := weapon.base_damage * (_player.data.bolt_damage_multiplier + weapon.combo_multipliers[0])
+	# O Dardo eletrocuta: o 1º golpe de espada logo depois é crítico (GDD §6.9).
+	var expected := weapon.base_damage * (_player.data.bolt_damage_multiplier
+			+ weapon.combo_multipliers[0] * Enemy.SHOCK_CRIT_MULTIPLIER)
 	_check(_bolts == bolts_before + 1, "alvo distante: dispara o Dardo de Raio")
 	_check(_dashes == dashes_before + 1, "alvo distante: faz o Passo Relâmpago")
 	_check(_player.is_target_in_melee_range(), "Passo Relâmpago termina ao alcance da espada")
 	_check(is_equal_approx(hp_before - bowman.health.current_health, expected),
-			"Dardo + 1º golpe causam %.0f (recebeu %.0f)" % [expected, hp_before - bowman.health.current_health])
+			"Dardo + 1º golpe (crítico no eletrocutado) causam %.0f (recebeu %.0f)" % [expected, hp_before - bowman.health.current_health])
 
 	await _wait(weapon.hit_recovery + SETTLE_TIME)
 	_player.global_position = Vector3.ZERO

@@ -93,7 +93,8 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	_wave_enemies.erase(enemy)
 	if _alive > 0:
 		return
-	# Finisher (GDD §6.7): o último inimigo da onda caiu com um golpe forte.
-	if enemy.last_hit != null and enemy.last_hit.is_heavy:
+	# Finalização (GDD §6.7): o último inimigo da onda cai em câmera lenta.
+	if enemy.last_hit != null and enemy.last_hit.source is Player:
 		Events.wave_finisher.emit(enemy)
-	wave_cleared.emit()
+	# Adiado: a morte pode vir de dentro de um sinal de colisão, e a próxima onda cria áreas novas.
+	wave_cleared.emit.call_deferred()

@@ -35,6 +35,10 @@ const SWORD_MESH := "Paladin_J_Nordstrom"
 const HERO_RIM_COLOR := Color(0.55, 0.65, 0.85)
 const HERO_RIM_INTENSITY: float = 0.6
 const BLADE_GLOW: float = 1.6
+## Eletrocutado causado pelos poderes e pelo Dardo (s) e bônus de dano dos raios na tempestade.
+const POWER_SHOCK_TIME: float = 2.0
+const BOLT_SHOCK_TIME: float = 1.2
+const STORM_POWER_BONUS: float = 0.3
 const BLADE_GLOW_CAST: float = 6.0
 ## Altura de onde sai o Dardo e para onde ele mira no alvo.
 const BOLT_ORIGIN_HEIGHT: float = 1.3
@@ -355,14 +359,21 @@ func build_attack_info(hit_index: int) -> DamageInfo:
 
 
 ## Dano de um poder de raio: escala com o ATK da espada e usa o elemento dela (GDD §6.5).
-func build_power_info(multiplier: float, heavy: bool) -> DamageInfo:
+## Com tempestade (Weather) os raios ficam até 30% mais fortes e eletrocutam por mais tempo.
+func build_power_info(multiplier: float, heavy: bool, shock_time: float = POWER_SHOCK_TIME) -> DamageInfo:
 	var info := DamageInfo.new()
-	info.amount = base_damage * multiplier
+	info.amount = base_damage * multiplier * storm_multiplier()
 	info.element = element
 	info.is_heavy = heavy
+	info.is_power = true
+	info.shock_time = shock_time * (1.0 + GameState.storm_intensity * 0.5)
 	info.counter_multiplier = data.counter_multiplier
 	info.source = self
 	return info
+
+
+func storm_multiplier() -> float:
+	return 1.0 + GameState.storm_intensity * STORM_POWER_BONUS
 
 
 # --- Poderes de raio (GDD §6.5) ---------------------------------------------
@@ -406,10 +417,7 @@ func fire_bolt() -> void:
 	if bolt_target == null:
 		return
 	bolt_cooldown.start(data.bolt_cooldown)
-	var info := DamageInfo.new()
-	info.amount = base_damage * data.bolt_damage_multiplier
-	info.element = element
-	info.source = self
+	var info := build_power_info(data.bolt_damage_multiplier, false, BOLT_SHOCK_TIME)
 	var from := blade_tip_position()
 	var to := bolt_target.global_position + Vector3.UP * TARGET_AIM_HEIGHT
 	var color := lightning_color()

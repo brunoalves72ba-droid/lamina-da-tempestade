@@ -19,6 +19,7 @@ var _line_label: Label
 var _queue: Array[Array] = []  # [quem, texto, duração]
 var _line_time: float = 0.0
 var _crosshair: Label
+var _weather_label: Label
 
 
 func _ready() -> void:
@@ -29,6 +30,9 @@ func _ready() -> void:
 	_build_crosshair()
 	Events.objective_changed.connect(show_objective)
 	Events.narration_requested.connect(queue_line)
+	Events.weather_changed.connect(func(weather_name: String, is_storm: bool) -> void:
+		_weather_label.text = weather_name.to_upper() + ("  ·  raios +30%" if is_storm else "")
+		_weather_label.add_theme_color_override(&"font_color", Color(0.65, 0.85, 1.0) if is_storm else Color(0.7, 0.7, 0.72)))
 	Events.aim_mode_changed.connect(func(mode: int) -> void: _crosshair.visible = mode == GameState.AimMode.FREE)
 	_crosshair.visible = GameState.aim_mode == GameState.AimMode.FREE
 
@@ -96,6 +100,8 @@ func _build_objective() -> void:
 	_objective_label = _label(20, OBJECTIVE_COLOR, HORIZONTAL_ALIGNMENT_RIGHT)
 	_objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_objective_label)
+	_weather_label = _label(14, Color(0.7, 0.7, 0.72), HORIZONTAL_ALIGNMENT_RIGHT)
+	box.add_child(_weather_label)
 
 
 func _build_narration() -> void:

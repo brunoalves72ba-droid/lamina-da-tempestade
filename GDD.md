@@ -378,11 +378,18 @@ Objetivo: transformar o percurso linear num **mundo aberto medieval sombrio** (l
 | Fase | Conteúdo | Situação |
 |---|---|---|
 | A. Base | Object Pooling (`Pools`), `AudioManager` com canais limitados, save v2 com auto-save e Continuar da última fogueira, arcos de história com objetivo e narração na HUD, mira híbrida (assistida/livre, tecla **T**), reputação (dados), New Game+ (dados) | ✅ feito |
-| B. Visual e combate | Shaders de raio/plasma, luzes pulsantes, bloom/distorção, clima (chuva/tempestade potencializa o raio), dia/noite, status Eletrocutado, condução por água/metal, crateras e fumaça, choque de espadas, gore estilizado e finalização em câmera lenta | a fazer |
+| B. Visual e combate | Shader de raio HDR (núcleo, halo, plasma, ramificações) com luz pulsante e Glow; dia/noite e clima (chuva, tempestade com raios distantes); Eletrocutado; condução por poças, armaduras e armas caídas; crateras com fumaça e brasas; choque de espadas com clarão; gore estilizado (sangue, desmembramento) e câmera lenta no último inimigo de cada onda | ✅ feito |
 | C. IA e mundo | Inimigos demoníacos (shader de corrupção, olhos brilhantes, aura), IA de flanco/investida/defesa/contra-ataque, hordas por arco, mapa aberto, eventos dinâmicos (emboscadas, mercadores pedindo socorro, patrulhas), efeito da reputação em NPCs/missões/preços | a fazer |
 | D. Fluxo e loja | Menu título (Novo Jogo, Continuar, Configurações, Sair), tela de carregamento com progresso real e dicas, introdução e cutscenes de marco, encerramento, loja unificada (espadas, armaduras, poderes), Arena de Hordas | a fazer |
 
 **Campanha (Fase A):** 4 arcos em `data/story/` — *A Trilha dos Corvos*, *A Ponte de Pedra* (Grom), *O Bosque Morto* (Mutante), *O Santuário das Tempestades* (Guardião). Cada arco narra a abertura, mostra um objetivo por vez e, ao terminar, narra o encerramento, dá ouro e reputação e salva. Protagonista: Kael, último cavaleiro da Ordem do Grifo de Prata; inimigo: a Mácula.
+
+**Fase B — regras:**
+- *Eletrocutado* (poderes 2 s, Dardo 1,2 s, Fúria 3 s; +50% na tempestade): o inimigo fica 55% mais lento, treme com arcos no corpo, e golpes de **espada** nele são **críticos (×1,5)**.
+- *Condução:* raio que cai numa **poça** atinge todos dentro dela (60% do dano, eletrocuta). **Esqueleto** (metal) faz a Corrente em Cadeia saltar 60% mais longe e, ao morrer, larga a espada: metal no chão conduz o raio a inimigos a até 3 m por 12 s. 2 poças por clareira.
+- *Clima:* hora avança (1 dia = 10 min, começa às 20h30). À noite os inimigos se revezam até 35% mais rápido e batem até 15% mais forte. Limpo/Chuva/Tempestade mudam a cada 70–150 s; na **Tempestade** os poderes de raio ficam **+30%** e caem raios distantes. A HUD mostra o clima.
+- *Gore* (`GameState.gore_enabled`, salvo; opção de menu na Fase D): morte por espada deixa sangue no chão e, em golpe forte/crítico (ou 35% das vezes), arranca cabeça ou antebraço com jorro e pedaços; morte por raio desintegra em cinzas. Chefões não são desmembrados.
+- *Desempenho medido* (Iris Xe, Baixo, 1280×720, tempestade forçada): mediana ~62 FPS, mínimo ~52.
 
 **Facções (reputação −100 a 100):** Ordem do Grifo de Prata, Guilda dos Mercadores (preços −15% a +15%), Vilarejo de Pedra-Cinza.
 

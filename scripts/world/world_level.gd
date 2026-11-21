@@ -49,9 +49,12 @@ var _active_zone: CombatZone
 var _zone_generation: int = 0
 var _finished: bool = false
 var _started: bool = false
+const PUDDLES_PER_ZONE: int = 2
 var _respawn_point: Vector3 = Vector3.ZERO
 ## Arcos de história, objetivo atual e narração (GDD §4.1).
 var story: StoryDirector
+## Dia/noite e clima (GDD §9.1).
+var weather: Weather
 var _pause_menu: PauseMenu
 
 @onready var player: Player = %Player
@@ -109,6 +112,7 @@ func _ready() -> void:
 	_respawn_point = terrain.ground_point(route_point(1.5)) + Vector3.UP * 0.2
 	_place_player(_respawn_point, route_direction(1.5))
 	_restore_saved_progress()
+	_setup_weather_and_puddles()
 	story = StoryDirector.new()
 	story.name = "StoryDirector"
 	add_child(story)
@@ -292,6 +296,25 @@ func _apply_player_stats() -> void:
 		reduction = armor_upgrade.secondary_at(GameState.level_of(armor_upgrade))
 	player.apply_stats(damage + level_bonus * progression.damage_per_level,
 			max_health + level_bonus * progression.health_per_level, reduction)
+
+
+## Clima/dia-noite (Weather) e poças d'água nas clareiras (conduzem o raio).
+func _setup_weather_and_puddles() -> void:
+	weather = Weather.new()
+	weather.name = "Weather"
+	add_child(weather)
+	weather.setup(_environment.environment, get_node(^"Moon") as DirectionalLight3D,
+			get_node_or_null(^"StormSky") as StormSky, terrain, player)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7331
+	for zone: CombatZone in zones:
+		for i: int in PUDDLES_PER_ZONE:
+			var angle := rng.randf() * TAU
+			var point := zone.global_position + Vector3(cos(angle), 0.0, sin(angle)) * rng.randf_range(2.0, 7.0)
+			var puddle := Puddle.new()
+			puddle.radius = rng.randf_range(1.3, 2.2)
+			add_child(puddle)
+			puddle.global_position = terrain.ground_point(point)
 
 
 ## Continuar: fogueiras e clareiras antes da última fogueira salva já contam, e o herói

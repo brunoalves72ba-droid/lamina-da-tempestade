@@ -45,6 +45,13 @@ var checkpoint_progress: float = 0.0
 var owned_swords: Array[StringName] = [STARTING_SWORD]
 var equipped_sword: StringName = STARTING_SWORD
 var reputation: Dictionary[StringName, int] = {}
+## Sangue, desmembramento e cinzas (Configurações). Salvo.
+var gore_enabled: bool = true
+## Estado do mundo agora (não salvo; o Weather atualiza): 0..1.
+## storm_intensity: tempestade fortalece os poderes de raio. night_factor: à noite os inimigos
+## atacam mais rápido e mais forte.
+var storm_intensity: float = 0.0
+var night_factor: float = 0.0
 var progression: ProgressionData = preload(PROGRESSION_PATH)
 
 var _upgrade_levels: Dictionary[StringName, int] = {}
@@ -230,7 +237,7 @@ func to_dict() -> Dictionary:
 			"game_completed": game_completed, "new_game_plus": new_game_plus,
 			"checkpoint_progress": checkpoint_progress,
 			"owned_swords": owned_swords.map(func(id: StringName) -> String: return String(id)),
-			"equipped_sword": String(equipped_sword), "reputation": rep}
+			"equipped_sword": String(equipped_sword), "reputation": rep, "gore_enabled": gore_enabled}
 
 
 func from_dict(data: Dictionary) -> void:
@@ -255,6 +262,7 @@ func from_dict(data: Dictionary) -> void:
 	equipped_sword = StringName(str(data.get("equipped_sword", STARTING_SWORD)))
 	if not equipped_sword in owned_swords:
 		equipped_sword = STARTING_SWORD
+	gore_enabled = bool(data.get("gore_enabled", true))
 	reputation.clear()
 	var rep: Dictionary = data.get("reputation", {})
 	for faction: String in rep:

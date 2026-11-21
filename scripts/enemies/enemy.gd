@@ -18,6 +18,13 @@ const DEATH_REMOVE_DELAY: float = 2.2
 ## Depois de cair, o corpo se desintegra em cinzas e brasas.
 const DISINTEGRATE_DELAY: float = 1.1
 const DISINTEGRATE_COLOR := Color(1.0, 0.55, 0.2)
+## Chance de desmembrar numa morte por golpe normal de espada (forte/crítico: sempre).
+const DISMEMBER_CHANCE: float = 0.35
+const SHOCK_SLOW: float = 0.45
+const SHOCK_CRIT_MULTIPLIER: float = 1.5
+const SHOCK_ARC_INTERVAL: float = 0.09
+const SHOCK_TWITCH_DEGREES: float = 7.0
+const SHOCK_COLOR := Color(0.7, 0.9, 1.0)
 const PROJECTILE_ORIGIN_HEIGHT: float = 1.3
 ## Inimigos em guarda do lado da câmera (produto escalar acima disto) contornam o herói
 ## para a frente, para não taparem a visão.
@@ -55,7 +62,12 @@ var _target_hurtbox: Hurtbox
 var _counter_consumed: bool = false
 ## Poderes de chefão (só existe se data.boss != null).
 var boss_brain: BossBrain
+## Eletrocutado (GDD §6.9): segundos restantes. Fica mais lento, treme com arcos no corpo e
+## golpes físicos de espada viram críticos.
+var shock_remaining: float = 0.0
+var _shock_arc_timer: float = 0.0
 var _death_timer: SceneTreeTimer
+var _death_by_power: bool = false
 
 @onready var health: HealthComponent = %HealthComponent
 @onready var hurtbox: Hurtbox = %Hurtbox
@@ -105,7 +117,14 @@ func _physics_process(delta: float) -> void:
 	velocity.y = -0.5 if is_on_floor() else velocity.y - data.gravity * delta
 	if boss_brain != null and boss_brain.is_airborne():
 		return
+	if shock_remaining > 0.0:
+		_update_shock(delta)
+		velocity.x *= SHOCK_SLOW
+		velocity.z *= SHOCK_SLOW
 	move_and_slide()
+	if shock_remaining > 0.0:
+		velocity.x /= SHOCK_SLOW
+		velocity.z /= SHOCK_SLOW
 	if not health.is_dead:
 		body.update_locomotion(global_basis.inverse() * velocity, is_aware, false)
 
@@ -228,9 +247,11 @@ func reset_state() -> void:
 	hurtbox.invulnerable = false
 	_model.scale = Vector3.ONE * data.body_scale
 	_model.rotation_degrees = Vector3.ZERO
+	shock_remaining = 0.0
 	if _death_timer != null and _death_timer.timeout.is_connected(_disintegrate):
 		_death_timer.timeout.disconnect(_disintegrate)
 	body.restore()
+	Gore.restore(self)
 	body.stop_action()
 	if boss_brain != null:
 		boss_brain.reset()
@@ -309,6 +330,15 @@ func play_death() -> void:
 	_show_stun_label = false
 	body.play_action(&"death", 1.0, 0.0, true)
 	SfxLibrary.play(self, &"roar" if is_boss() else &"enemy_die")
+	_death_by_power = last_hit != null and last_hit.is_power
+	if not _death_by_power and last_hit != null and last_hit.source is Player and not is_boss():
+		# Morte por espada: sangue e, em golpe forte, desmembramento.
+		if last_hit.is_heavy or last_hit.is_critical or randf() < DISMEMBER_CHANCE:
+			Gore.dismember(self, _away_from(last_hit.source))
+		else:
+			Gore.blood_pool(get_parent(), global_position, 0.9)
+	if is_metal_armored():
+		Conduction.drop_metal(get_parent(), global_position + global_basis.x * 0.6)
 	if boss_brain != null:
 		boss_brain.cancel()
 	_death_timer = get_tree().create_timer(DISINTEGRATE_DELAY, false, true)
@@ -320,6 +350,9 @@ func play_death() -> void:
 func _disintegrate() -> void:
 	if not health.is_dead:
 		return
+	# Morte por espada com gore ligado: o corpo fica (sangue) em vez de virar cinzas.
+	if Gore.enabled() and not _death_by_power and not is_boss():
+		return
 	var color := Element.color(element) if element != Element.Type.NONE else DISINTEGRATE_COLOR
 	body.disintegrate(color)
 	SfxLibrary.play(self, &"disintegrate")
@@ -329,7 +362,8 @@ func _disintegrate() -> void:
 
 func _build_attack_info() -> DamageInfo:
 	var info := DamageInfo.new()
-	info.amount = data.attack_damage * damage_scale
+	# À noite a Mácula fica mais forte (até +15% de dano).
+	info.amount = data.attack_damage * damage_scale * (1.0 + 0.15 * GameState.night_factor)
 	info.element = element
 	info.can_be_parried = true
 	info.source = self
@@ -355,6 +389,11 @@ func _on_hit_received(info: DamageInfo) -> void:
 		info.is_counter = true
 		info.is_heavy = true
 		_counter_consumed = true
+	if is_shocked() and not info.is_power and info.source is Player:
+		info.amount *= SHOCK_CRIT_MULTIPLIER
+		info.is_critical = true
+	if info.shock_time > 0.0:
+		apply_shock(info.shock_time)
 	last_hit = info
 	health.take_damage(info.amount)
 	Events.damage_taken.emit(self, info)
@@ -367,6 +406,42 @@ func _on_hit_received(info: DamageInfo) -> void:
 	elif info.is_heavy and can_be_staggered():
 		_knockback = _away_from(info.source)
 		state_machine.transition_to(&"Stagger")
+
+
+# --- Eletrocutado ------------------------------------------------------------
+
+func is_shocked() -> bool:
+	return shock_remaining > 0.0 and not health.is_dead
+
+
+func apply_shock(duration: float) -> void:
+	if health.is_dead:
+		return
+	shock_remaining = maxf(shock_remaining, duration)
+
+
+## Esqueleto (espada e escudo de metal) conduz melhor o raio da Corrente em Cadeia.
+func is_metal_armored() -> bool:
+	return data.model_variant == EnemyData.ModelVariant.SOLDIER
+
+
+func _update_shock(delta: float) -> void:
+	shock_remaining -= delta
+	if shock_remaining <= 0.0 or health.is_dead:
+		shock_remaining = 0.0
+		_model.rotation_degrees = Vector3.ZERO
+		return
+	# Espasmos: pequenos trancos no corpo e arcos estalando entre partes do corpo.
+	_model.rotation_degrees = Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * SHOCK_TWITCH_DEGREES
+	_shock_arc_timer -= delta
+	if _shock_arc_timer <= 0.0 and _model.visible:
+		_shock_arc_timer = SHOCK_ARC_INTERVAL
+		var points := body.body_points()
+		if points.size() >= 2:
+			var a: Vector3 = points.pick_random()
+			var b: Vector3 = points.pick_random()
+			LightningArc.spawn(get_parent(), a, b, SHOCK_COLOR, 0.07, 0.45)
+		body.flash(SHOCK_COLOR, 1.2)
 
 
 ## Golpes fortes fazem cambalear quem não tem postura e não está no meio do próprio ataque.

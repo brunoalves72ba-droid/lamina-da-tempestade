@@ -78,10 +78,12 @@ func release(node: Node) -> void:
 ## Devolve depois de `seconds` (respeita pausa e câmera lenta).
 func release_after(node: Node, seconds: float) -> void:
 	var serial: int = node.get_meta(&"pool_serial", 0)
+	var id := node.get_instance_id()
 	get_tree().create_timer(seconds, false).timeout.connect(func() -> void:
-		# Só devolve se ninguém reutilizou o nó nesse meio-tempo.
-		if is_instance_valid(node) and node.get_meta(&"pool_serial", 0) == serial:
-			release(node))
+		# Só devolve se o nó ainda existe e ninguém o reutilizou nesse meio-tempo.
+		var current := instance_from_id(id) as Node
+		if current != null and current.get_meta(&"pool_serial", 0) == serial:
+			release(current))
 
 
 ## Tween ligado ao nó que é encerrado quando o nó volta ao pool.

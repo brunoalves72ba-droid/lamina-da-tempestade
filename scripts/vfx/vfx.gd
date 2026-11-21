@@ -49,7 +49,9 @@ static func flash_light(parent: Node, at: Vector3, color: Color, energy: float =
 	light.light_color = color
 	light.light_energy = energy
 	light.omni_range = light_range
-	Pools.tween(light).tween_property(light, "light_energy", 0.0, duration)
+	# Pulsa como uma descarga (cai tremendo até apagar).
+	Pools.tween(light).tween_method(func(t: float) -> void:
+		light.light_energy = energy * (1.0 - t) * randf_range(0.4, 1.0), 0.0, 1.0, duration)
 
 
 ## Marca queimada/brilhante no chão que some devagar.
@@ -75,10 +77,22 @@ static func lightning_strike(parent: Node, ground: Vector3, color: Color, radius
 	LightningArc.spawn(parent, sky.lerp(ground, 0.4), ground + Vector3(randf_range(-1, 1), 0.1, randf_range(-1, 1)),
 			color, 0.25, 1.5, 0.0)
 	sparks(parent, ground + Vector3.UP * 0.2, color, 40, 9.0, 0.5)
+	sparks(parent, ground + Vector3.UP * 0.1, Color(1.0, 0.6, 0.25), 16, 3.0, 1.2, -4.0)
 	shockwave(parent, ground, radius, color, 0.4)
-	scorch(parent, ground, radius * 0.6, color)
+	scorch(parent, ground, radius * 0.6, color, 6.0)
+	smoke(parent, ground, radius * 0.5, 3.0)
 	if with_light:
 		flash_light(parent, ground + Vector3.UP * 2.0, color, 8.0, radius * 5.0, 0.35)
+		Events.screen_flash_requested.emit(color.lerp(Color.WHITE, 0.6), 0.25)
+
+
+## Fumaça escura subindo devagar (cratera de raio, chão carbonizado).
+static func smoke(parent: Node, at: Vector3, radius: float = 0.8, duration: float = 3.0) -> void:
+	var particles := _place(&"vfx_smoke", _new_smoke, parent, at, duration + 2.5) as CPUParticles3D
+	particles.emission_sphere_radius = radius
+	particles.lifetime = 2.2
+	particles.amount = 14
+	particles.restart()
 
 
 ## Corte elétrico em meia-lua (Lâmina Voltaica), virado para `facing` e inclinado `tilt` rad.
@@ -104,12 +118,16 @@ static func charge_crackle(parent: Node, center: Node3D, offset: Vector3, color:
 		radius: float = 0.5, count: int = 6) -> void:
 	for i: int in count:
 		var delay := duration * float(i) / float(count)
+		var center_id := center.get_instance_id()
+		var parent_id := parent.get_instance_id()
 		parent.get_tree().create_timer(delay, false).timeout.connect(func() -> void:
-			if not is_instance_valid(center) or not center.is_inside_tree():
+			var center_now := instance_from_id(center_id) as Node3D
+			var parent_now := instance_from_id(parent_id) as Node
+			if center_now == null or parent_now == null or not center_now.is_inside_tree():
 				return
-			var origin := center.global_position + center.global_basis * offset
+			var origin := center_now.global_position + center_now.global_basis * offset
 			var start := origin + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)).normalized() * radius
-			LightningArc.spawn(parent, start, origin, color, 0.08, 0.6))
+			LightningArc.spawn(parent_now, start, origin, color, 0.08, 0.6))
 
 
 ## Cinzas e brasas saindo do corpo (desintegração).
@@ -155,6 +173,37 @@ static func _new_sparks() -> Node:
 	particles.scale_amount_min = 0.6
 	particles.scale_amount_max = 1.6
 	particles.scale_amount_curve = _fade_curve()
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return particles
+
+
+static func _new_smoke() -> Node:
+	var particles := CPUParticles3D.new()
+	particles.one_shot = true
+	particles.explosiveness = 0.4
+	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.9, 0.9)
+	particles.mesh = quad
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = _get_disc_texture()
+	particles.material_override = material
+	particles.direction = Vector3.UP
+	particles.spread = 20.0
+	particles.gravity = Vector3(0.0, 0.6, 0.0)
+	particles.initial_velocity_min = 0.3
+	particles.initial_velocity_max = 0.9
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.5
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0.35, 0.35, 0.37, 0.0))
+	gradient.add_point(0.25, Color(0.3, 0.3, 0.32, 0.22))
+	gradient.set_color(gradient.get_point_count() - 1, Color(0.4, 0.4, 0.42, 0.0))
+	particles.color_ramp = gradient
 	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return particles
 
