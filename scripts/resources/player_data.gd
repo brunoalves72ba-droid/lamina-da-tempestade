@@ -35,5 +35,28 @@ extends Resource
 @export var charge_power_hit: float = 5.0
 @export var charge_damage_loss: float = 10.0
 
+@export_group("Movimento livre")
+@export var move_speed: float = 4.2
+@export var sprint_speed: float = 6.8
+@export var acceleration: float = 18.0
+@export var deceleration: float = 24.0
+## Giro em rad/s ao andar; nas ações de combate o giro é instantâneo.
+@export var turn_speed: float = 12.0
+@export var gravity: float = 24.0
+@export var attack_lunge_distance: float = 0.6
+## Distância do alvo abaixo da qual o golpe não avança (evita empurrar o inimigo).
+@export var lunge_min_target_distance: float = 1.7
+## Alcance da "mira suave": sem travar, os golpes viram para o inimigo mais perto daqui.
+@export var soft_aim_range: float = 3.5
+
+@export_group("Esquiva e bloqueio")
+@export var dodge_distance: float = 4.0
+@export var dodge_duration: float = 0.42
+@export var dodge_invulnerable_time: float = 0.3
+@export var dodge_cooldown: float = 0.15
+@export_range(0.0, 1.0) var block_reduction: float = 0.7
+@export var block_move_speed: float = 1.8
+
 @export_group("Reações")
 @export var hurt_time: float = 0.3
+@export var hurt_knockback_speed: float = 4.0

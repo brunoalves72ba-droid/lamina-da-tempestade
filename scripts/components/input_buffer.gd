@@ -4,7 +4,7 @@ extends Node
 ## alguns frames cedo não seja perdido (CLAUDE.md › Entrada).
 ## O relógio avança no physics process, então respeita hitstop e --fixed-fps.
 
-@export var actions: Array[StringName] = [&"attack", &"parry", &"skill_1", &"skill_2", &"skill_3"]
+@export var actions: Array[StringName] = [&"attack", &"parry", &"dodge", &"skill_1", &"skill_2", &"skill_3"]
 @export var buffer_time: float = 0.2
 
 var enabled: bool = true

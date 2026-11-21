@@ -18,9 +18,9 @@ func _ready() -> void:
 	layer = 20
 
 
-func show_result(victory: bool, collected: int, earned: int) -> void:
+func show_result(victory: bool, collected: int, earned: int, victory_title: String = "ARENA CONCLUÍDA") -> void:
 	var column := MenuKit.overlay(self)
-	column.add_child(MenuKit.label("ARENA CONCLUÍDA" if victory else "VOCÊ CAIU", 36,
+	column.add_child(MenuKit.label(victory_title if victory else "VOCÊ CAIU", 36,
 			VICTORY_COLOR if victory else DEFEAT_COLOR))
 	column.add_child(MenuKit.label("Ouro coletado: %d" % collected, 18, MenuKit.MUTED_COLOR))
 	if victory:

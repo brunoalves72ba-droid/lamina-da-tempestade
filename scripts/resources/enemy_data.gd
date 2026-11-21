@@ -12,8 +12,9 @@ enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE }
 @export var body_color: Color = Color(0.42, 0.13, 0.12)
 @export var body_scale: float = 1.0
 @export var model_variant: ModelVariant = ModelVariant.SOLDIER
-## Ouro ganho ao derrotar (GDD §8).
+## Ouro e experiência ganhos ao derrotar (GDD §8).
 @export var gold_reward: int = 10
+@export var xp_reward: int = 20
 
 @export_group("Ataque")
 @export var attack_kind: AttackKind = AttackKind.MELEE
@@ -33,7 +34,26 @@ enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE }
 @export var move_speed: float = 2.5
 @export var separation_radius: float = 1.4
 
+@export_group("Movimento livre")
+## Percebe o herói a esta distância (ou ao ser atingido).
+@export var aggro_range: float = 14.0
+## Correndo para alcançar o herói (longe da distância de guarda).
+@export var run_speed: float = 3.8
+## Andando de lado em volta do herói enquanto espera a vez de atacar.
+@export var strafe_speed: float = 1.3
+@export var strafe_switch_min: float = 1.5
+@export var strafe_switch_max: float = 3.5
+## Alcance real do golpe corpo a corpo: durante o aviso, avança se estiver mais longe.
+@export var attack_reach: float = 2.1
+@export var acceleration: float = 10.0
+@export var turn_speed: float = 8.0
+@export var gravity: float = 24.0
+
 @export_group("Reações")
 @export var stun_time: float = 1.5
+## Com postura (Elite), golpes fortes não fazem cambalear.
+@export var has_poise: bool = false
+@export var stagger_time: float = 0.35
+@export var knockback_speed: float = 3.5
 ## Animação de entrada; o inimigo não ataca nem recebe dano nesse tempo (GDD §5).
 @export var spawn_time: float = 1.0

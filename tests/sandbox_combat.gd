@@ -42,6 +42,8 @@ func reset() -> void:
 	enemy.global_transform = _enemy_start
 	player.reset_state()
 	enemy.reset_state()
+	# Morto, ele saiu da fila de ataques; ao reviver precisa voltar.
+	tokens.register(enemy)
 
 
 ## Cria um inimigo extra (usado pelos testes automáticos). reset() remove.
@@ -60,3 +62,4 @@ func _on_enemy_died() -> void:
 	await get_tree().create_timer(respawn_delay).timeout
 	if enemy.health.is_dead:
 		enemy.reset_state()
+		tokens.register(enemy)

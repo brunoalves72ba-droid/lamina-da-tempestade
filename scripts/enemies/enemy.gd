@@ -12,20 +12,10 @@ const GROUP := &"enemies"
 const HIT_FLASH_COLOR := Color(1.0, 0.95, 0.85)
 ## Amarelo elétrico: lê como "eletrocutado pela Descarga" e não se confunde com o azul do herói.
 const STUN_COLOR := Color(0.95, 0.82, 0.25)
-const FLASH_TIME: float = 0.2
-const POSE_BLEND_TIME: float = 0.2
-const SPAWN_START_SCALE: float = 0.05
-const DEATH_REMOVE_DELAY: float = 1.5
+const STUN_RIM_INTENSITY: float = 2.0
+const ELEMENT_RIM_INTENSITY: float = 0.7
+const DEATH_REMOVE_DELAY: float = 2.5
 const PROJECTILE_ORIGIN_HEIGHT: float = 1.3
-## Poses da arma (rotação do pivô, em graus).
-const REST_POSE := Vector3(-20.0, 0.0, 0.0)
-const WINDUP_POSE := Vector3(80.0, 0.0, 0.0)
-const AIM_POSE := Vector3(0.0, 0.0, 0.0)
-const STRIKE_POSE := Vector3(-60.0, 0.0, 0.0)
-const STUNNED_POSE := Vector3(-75.0, 0.0, 25.0)
-const DEAD_TILT := Vector3(85.0, 0.0, 0.0)
-## Fração do aviso usada para levantar a arma (o resto é a pausa antes do golpe).
-const WINDUP_FRACTION: float = 0.6
 ## Inimigos em guarda do lado da câmera (produto escalar acima disto) contornam o herói
 ## para a frente, para não taparem a visão.
 const CAMERA_SIDE_THRESHOLD: float = 0.2
@@ -41,6 +31,9 @@ const CAMERA_HIDE_HEIGHT: float = 1.0
 @export var remove_after_death: bool = false
 
 var element: Element.Type = Element.Type.NONE
+## Multiplicadores de vida e dano conforme o nível do herói (definidos por quem cria o inimigo).
+var health_scale: float = 1.0
+var damage_scale: float = 1.0
 var target: Node3D
 ## Marcado por _on_parried durante o golpe; o estado Strike lê e vai para Stunned.
 var strike_was_parried: bool = false
@@ -48,42 +41,35 @@ var strike_was_parried: bool = false
 var last_hit: DamageInfo
 
 var _strikes_left: int = 0
+## Percebeu o herói (por distância ou por ter sido atingido).
+var is_aware: bool = false
+var _strafe_sign: float = 1.0
+var _strafe_timer: float = 0.0
+var _knockback: Vector3 = Vector3.ZERO
 var _show_stun_label: bool = false
 var _target_health: HealthComponent
 var _target_hurtbox: Hurtbox
 var _counter_consumed: bool = false
-var _body_material: StandardMaterial3D
-var _pose_tween: Tween
-var _flash_tween: Tween
 
 @onready var health: HealthComponent = %HealthComponent
 @onready var hurtbox: Hurtbox = %Hurtbox
 @onready var hitbox: Hitbox = %Hitbox
 @onready var state_machine: StateMachine = %StateMachine
 @onready var telegraph: TelegraphIndicator = %TelegraphIndicator
+@onready var body: AnimatedBody = %Body
 @onready var _model: Node3D = %Model
-@onready var _body_mesh: MeshInstance3D = %BodyMesh
-@onready var _weapon_pivot: Node3D = %WeaponPivot
 @onready var _stun_label: Label3D = %StunLabel
-@onready var _helmet: MeshInstance3D = %Helmet
-@onready var _blade: MeshInstance3D = %WeaponMesh
-@onready var _crossbow: Node3D = %Crossbow
-@onready var _shield: Node3D = %Shield
-@onready var _horns: Node3D = %Horns
 
 
 func _ready() -> void:
 	assert(data != null, "Enemy precisa de EnemyData")
 	add_to_group(GROUP)
-	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = data.body_color
-	_body_mesh.material_override = _body_material
+	body.set_body_color(data.body_color)
 	_model.scale = Vector3.ONE * data.body_scale
-	_apply_model_variant()
-	_weapon_pivot.rotation_degrees = REST_POSE
+	_equip()
 	_show_stun_label = false
 	set_element(element)
-	health.reset(data.max_health)
+	health.reset(data.max_health * health_scale)
 	hurtbox.hit_received.connect(_on_hit_received)
 
 
@@ -95,36 +81,46 @@ func _process(_delta: float) -> void:
 	_stun_label.visible = _show_stun_label and not near_camera
 
 
-func _physics_process(_delta: float) -> void:
-	if health.is_dead:
-		return
-	_face_target()
-	if state_machine.is_in(&"Idle"):
-		_update_guard_movement()
+func _physics_process(delta: float) -> void:
+	var desired := Vector3.ZERO
+	if not health.is_dead:
+		_update_awareness()
+		desired = _desired_velocity(delta)
+		if not state_machine.is_in(&"Strike") and not state_machine.is_in(&"Stagger"):
+			_turn_toward_target(delta)
+	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	horizontal = horizontal.move_toward(desired, data.acceleration * delta)
+	velocity.x = horizontal.x
+	velocity.z = horizontal.z
+	velocity.y = -0.5 if is_on_floor() else velocity.y - data.gravity * delta
+	move_and_slide()
+	if not health.is_dead:
+		body.update_locomotion(global_basis.inverse() * velocity, is_aware, false)
 
 
-func _apply_model_variant() -> void:
+## Armas conforme o tipo: Soldado e Elite com espada e escudo; Besteiro com besta; Elite com chifres.
+func _equip() -> void:
 	var variant := data.model_variant
-	var is_crossbowman := variant == EnemyData.ModelVariant.CROSSBOWMAN
-	_crossbow.visible = is_crossbowman
-	_blade.visible = not is_crossbowman
-	_shield.visible = not is_crossbowman
-	_horns.visible = variant == EnemyData.ModelVariant.ELITE
+	if variant == EnemyData.ModelVariant.CROSSBOWMAN:
+		body.attach(&"mixamorig_RightHand", Equipment.crossbow())
+	else:
+		var blade := StandardMaterial3D.new()
+		blade.albedo_color = Equipment.STEEL.darkened(0.3)
+		blade.metallic = 0.85
+		blade.roughness = 0.35
+		body.attach(&"mixamorig_RightHand", Equipment.sword(blade, 0.75))
+		body.attach(&"mixamorig_LeftForeArm", Equipment.round_shield(), Equipment.round_shield_offset())
+	if variant == EnemyData.ModelVariant.ELITE:
+		body.attach(&"mixamorig_Head", Equipment.horns())
 
 
-## Afinidade elemental (GDD §7). O elmo brilha na cor do elemento; neutro mantém o ferro.
+## Afinidade elemental (GDD §7): contorno na cor do elemento; neutro sem contorno.
 func set_element(new_element: Element.Type) -> void:
 	element = new_element
 	if element == Element.Type.NONE:
-		_helmet.material_override = null
-		return
-	var material := StandardMaterial3D.new()
-	var color := Element.color(element)
-	material.albedo_color = color
-	material.emission_enabled = true
-	material.emission = color
-	material.emission_energy_multiplier = 1.2
-	_helmet.material_override = material
+		body.set_rim(Color.BLACK, 0.0)
+	else:
+		body.set_rim(Element.color(element), ELEMENT_RIM_INTENSITY)
 
 
 func set_target(new_target: Node3D) -> void:
@@ -190,12 +186,14 @@ func interrupt_attack() -> void:
 
 
 func reset_state() -> void:
-	health.reset(data.max_health)
+	health.reset(data.max_health * health_scale)
 	hitbox.disarm()
 	telegraph.stop()
 	hurtbox.invulnerable = false
 	_model.scale = Vector3.ONE * data.body_scale
 	_model.rotation_degrees = Vector3.ZERO
+	body.stop_action()
+	set_element(element)
 	state_machine.transition_to(&"Idle")
 	attack_finished.emit()
 
@@ -204,8 +202,12 @@ func reset_state() -> void:
 
 func begin_telegraph() -> void:
 	telegraph.play(data.telegraph_time)
-	var pose := AIM_POSE if is_ranged() else WINDUP_POSE
-	_tween_pose(pose, data.telegraph_time * WINDUP_FRACTION)
+	if is_ranged():
+		body.play_action_hit_at(&"shoot", data.telegraph_time - data.projectile_flight_time)
+	elif data.model_variant == EnemyData.ModelVariant.ELITE:
+		body.play_action_hit_at(&"elite_strike", data.telegraph_time)
+	else:
+		body.play_action_hit_at(&"enemy_strike", data.telegraph_time)
 	SfxLibrary.play(self, &"telegraph")
 	attack_telegraphed.emit(data.telegraph_time)
 
@@ -224,7 +226,6 @@ func launch_projectile() -> void:
 func begin_strike() -> void:
 	telegraph.stop()
 	strike_was_parried = false
-	_tween_pose(STRIKE_POSE, data.strike_active_time)
 	if not is_ranged():
 		hitbox.arm(_build_attack_info())
 
@@ -237,16 +238,13 @@ func finish_attack() -> void:
 	attack_finished.emit()
 
 
-func set_pose_rest(duration: float = POSE_BLEND_TIME) -> void:
-	_tween_pose(REST_POSE, duration)
+func set_pose_rest(_duration: float = 0.0) -> void:
+	body.stop_action()
 
 
 func play_spawn() -> void:
 	hurtbox.invulnerable = true
-	_model.scale = Vector3.ONE * data.body_scale * SPAWN_START_SCALE
-	var tween := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tween.tween_property(_model, "scale", Vector3.ONE * data.body_scale, data.spawn_time) \
-			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	body.play_action_for(&"spawn", data.spawn_time)
 
 
 func end_spawn() -> void:
@@ -256,21 +254,21 @@ func end_spawn() -> void:
 func begin_stun() -> void:
 	_counter_consumed = false
 	_show_stun_label = true
-	_body_material.albedo_color = STUN_COLOR
-	_tween_pose(STUNNED_POSE, POSE_BLEND_TIME)
+	body.set_rim(STUN_COLOR, STUN_RIM_INTENSITY)
+	body.play_action_for(&"stunned", data.stun_time)
 
 
 func end_stun() -> void:
 	_show_stun_label = false
-	_body_material.albedo_color = data.body_color
+	body.stop_action()
+	set_element(element)
 
 
 func play_death() -> void:
 	hitbox.disarm()
 	telegraph.stop()
 	_show_stun_label = false
-	var tween := create_tween()
-	tween.tween_property(_model, "rotation_degrees", DEAD_TILT, POSE_BLEND_TIME * 2.0)
+	body.play_action(&"death", 1.0, 0.0, true)
 	if remove_after_death:
 		get_tree().create_timer(DEATH_REMOVE_DELAY, false, true).timeout.connect(queue_free)
 
@@ -279,7 +277,7 @@ func play_death() -> void:
 
 func _build_attack_info() -> DamageInfo:
 	var info := DamageInfo.new()
-	info.amount = data.attack_damage
+	info.amount = data.attack_damage * damage_scale
 	info.element = element
 	info.can_be_parried = true
 	info.source = self
@@ -296,6 +294,7 @@ func _on_parried() -> void:
 func _on_hit_received(info: DamageInfo) -> void:
 	if health.is_dead:
 		return
+	is_aware = true
 	info.element_multiplier = Element.multiplier(info.element, element)
 	info.amount *= info.element_multiplier
 	# Contra-ataque: só o primeiro golpe recebido em cada atordoamento (GDD §6.2).
@@ -308,30 +307,79 @@ func _on_hit_received(info: DamageInfo) -> void:
 	health.take_damage(info.amount)
 	Events.damage_taken.emit(self, info)
 	SfxLibrary.play(self, &"hit_heavy" if info.is_heavy else &"hit")
-	_flash()
+	body.flash(HIT_FLASH_COLOR)
 	if health.is_dead:
 		state_machine.transition_to(&"Dead")
 		died.emit()
 		Events.entity_died.emit(self)
+	elif info.is_heavy and can_be_staggered():
+		_knockback = _away_from(info.source)
+		state_machine.transition_to(&"Stagger")
 
 
-# --- Movimento em guarda ----------------------------------------------------
+## Golpes fortes fazem cambalear quem não tem postura e não está no meio do próprio ataque.
+func can_be_staggered() -> bool:
+	return not data.has_poise and (state_machine.is_in(&"Idle") or state_machine.is_in(&"Recover"))
 
-## Aproxima/afasta até engage_distance, sai da frente da câmera e se afasta de outros inimigos.
-func _update_guard_movement() -> void:
+
+func begin_stagger() -> void:
+	body.play_action_for(&"stagger", data.stagger_time)
+
+
+func end_stagger() -> void:
+	_knockback = Vector3.ZERO
+	set_pose_rest()
+
+
+func _away_from(source: Node3D) -> Vector3:
+	if source == null or not is_instance_valid(source):
+		return global_basis.z
+	var away := global_position - source.global_position
+	away.y = 0.0
+	return away.normalized() if away.length_squared() > 0.0001 else global_basis.z
+
+
+# --- Movimento livre -------------------------------------------------------
+
+func _update_awareness() -> void:
+	if not is_aware and target != null and distance_to_target() <= data.aggro_range:
+		is_aware = true
+
+
+## Velocidade desejada conforme o estado: em guarda corre até o herói e depois o circula;
+## no aviso corpo a corpo avança se o herói saiu do alcance; cambaleando, é empurrado.
+func _desired_velocity(delta: float) -> Vector3:
 	if target == null:
-		return
+		return Vector3.ZERO
+	if state_machine.is_in(&"Stagger"):
+		return _knockback * data.knockback_speed
+	if state_machine.is_in(&"Telegraph") and not is_ranged() and distance_to_target() > data.attack_reach:
+		return _flat_direction_to_target() * data.move_speed
+	if not state_machine.is_in(&"Idle") or not is_aware:
+		return Vector3.ZERO
+	return _guard_velocity(delta)
+
+
+func _guard_velocity(delta: float) -> Vector3:
+	var to_target := _flat_direction_to_target()
+	var distance := distance_to_target()
+	var half_tolerance := data.position_tolerance * 0.5
 	var direction := Vector3.ZERO
-	var to_target := target.global_position - global_position
-	to_target.y = 0.0
-	var distance := to_target.length()
-	if distance > 0.001:
-		var half_tolerance := data.position_tolerance * 0.5
+	var speed := data.strafe_speed
+	if distance > data.engage_distance + data.position_tolerance * 2.0:
+		direction = to_target
+		speed = data.run_speed
+	else:
 		if distance > data.engage_distance + half_tolerance:
-			direction += to_target / distance
+			direction += to_target
 		elif distance < data.engage_distance - half_tolerance:
-			direction -= to_target / distance
-		direction += _away_from_camera_side(-to_target / distance)
+			direction -= to_target
+		_strafe_timer -= delta
+		if _strafe_timer <= 0.0:
+			_strafe_timer = randf_range(data.strafe_switch_min, data.strafe_switch_max)
+			_strafe_sign = -_strafe_sign if randf() < 0.6 else _strafe_sign
+		direction += Vector3.UP.cross(to_target) * _strafe_sign * 0.8
+		direction += _away_from_camera_side(-to_target)
 	for node: Node in get_tree().get_nodes_in_group(GROUP):
 		var other := node as Enemy
 		if other == null or other == self or other.health.is_dead:
@@ -340,9 +388,24 @@ func _update_guard_movement() -> void:
 		away.y = 0.0
 		var gap := away.length()
 		if gap > 0.001 and gap < data.separation_radius:
-			direction += away / gap * (1.0 - gap / data.separation_radius)
-	velocity = direction.limit_length(1.0) * data.move_speed
-	move_and_slide()
+			direction += away / gap * (1.0 - gap / data.separation_radius) * 1.5
+	return direction.limit_length(1.0) * speed
+
+
+func _flat_direction_to_target() -> Vector3:
+	var to_target := target.global_position - global_position
+	to_target.y = 0.0
+	return to_target.normalized() if to_target.length_squared() > 0.0001 else Vector3.ZERO
+
+
+func _turn_toward_target(delta: float) -> void:
+	if target == null or not is_instance_valid(target) or not is_aware:
+		return
+	var direction := _flat_direction_to_target()
+	if direction.is_zero_approx():
+		return
+	var target_yaw := atan2(-direction.x, -direction.z)
+	rotation.y = rotate_toward(rotation.y, target_yaw, data.turn_speed * delta)
 
 
 ## Empurrão tangencial (em volta do herói) para quem está entre a câmera e o herói.
@@ -362,28 +425,3 @@ func _away_from_camera_side(from_target: Vector3) -> Vector3:
 	if tangent.dot(to_camera) > 0.0:
 		tangent = -tangent
 	return tangent * camera_side
-
-
-func _flash() -> void:
-	if _flash_tween != null:
-		_flash_tween.kill()
-	var base_color := STUN_COLOR if is_stunned() else data.body_color
-	_body_material.albedo_color = HIT_FLASH_COLOR
-	_flash_tween = create_tween()
-	_flash_tween.tween_property(_body_material, "albedo_color", base_color, FLASH_TIME)
-
-
-func _tween_pose(pose: Vector3, duration: float) -> void:
-	if _pose_tween != null:
-		_pose_tween.kill()
-	_pose_tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	_pose_tween.tween_property(_weapon_pivot, "rotation_degrees", pose, duration)
-
-
-func _face_target() -> void:
-	if target == null or not is_instance_valid(target):
-		return
-	var look_point := target.global_position
-	look_point.y = global_position.y
-	if global_position.distance_squared_to(look_point) > 0.01:
-		look_at(look_point, Vector3.UP)

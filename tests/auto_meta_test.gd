@@ -1,12 +1,12 @@
 extends Node
-## Teste automático do M4 (GDD §12): loja, save/load, upgrades aplicados ao herói,
-## regra de ouro na derrota e pausa. Na pasta do projeto:
+## Teste automático da progressão: loja, save/load, XP e níveis, upgrades + nível aplicados ao herói
+## na trilha, morte (volta à fogueira guardando metade do ouro) e pausa. Na pasta do projeto:
 ##   godot --headless --path . --fixed-fps 60 res://tests/auto_meta_test.tscn
 ## Sai com código 0 se tudo passar e 1 se algo falhar. Usa um arquivo de save próprio.
 
 const SWORD: UpgradeData = preload("res://data/upgrades/sword.tres")
 const ARMOR: UpgradeData = preload("res://data/upgrades/armor.tres")
-const ARENA_SCENE: PackedScene = preload("res://scenes/levels/arena_01.tscn")
+const TRAIL_SCENE: PackedScene = preload("res://scenes/levels/trail_01.tscn")
 const PAUSE_SCENE: PackedScene = preload("res://ui/menus/pause_menu.tscn")
 const TEST_SAVE_PATH := "user://test_save.json"
 
@@ -18,8 +18,9 @@ func _ready() -> void:
 	GameState.reset()
 	_test_shop()
 	_test_save_roundtrip()
+	_test_levels()
 	await _test_upgrades_applied()
-	await _test_defeat_gold()
+	await _test_death_respawn()
 	await _test_pause()
 	GameState.reset()
 	print("\n%s — %d falha(s)" % ["META OK" if _failures == 0 else "META FALHOU", _failures])
@@ -67,35 +68,60 @@ func _test_save_roundtrip() -> void:
 	SaveManager.save_path = SaveManager.DEFAULT_PATH
 
 
+func _test_levels() -> void:
+	print("
+[XP e níveis]")
+	GameState.reset()
+	var progression := GameState.progression
+	var first := progression.xp_to_next(1)
+	_check(GameState.add_xp(first - 1) == 0 and GameState.level == 1, "abaixo de %d XP continua no nível 1" % first)
+	_check(GameState.add_xp(1) == 1 and GameState.level == 2 and GameState.xp == 0, "com %d XP sobe para o nível 2" % first)
+	var big := progression.xp_to_next(2) + progression.xp_to_next(3) + 5
+	_check(GameState.add_xp(big) == 2 and GameState.level == 4 and GameState.xp == 5, "XP de sobra sobe vários níveis de uma vez")
+	_check(progression.extra_enemies(1) == 0 and progression.extra_enemies(5) == 2, "nível 5 traz 2 inimigos extras por onda")
+	_check(progression.enemy_health_scale(5) > 1.0, "inimigos ficam mais fortes com o nível do herói")
+
+
 func _test_upgrades_applied() -> void:
-	print("\n[Upgrades aplicados ao herói]")
+	print("
+[Upgrades e nível aplicados ao herói]")
 	GameState.reset()
 	GameState.add_gold(10000)
 	GameState.try_buy(SWORD)
 	GameState.try_buy(SWORD)
 	GameState.try_buy(ARMOR)
-	var level := _spawn_arena()
+	GameState.add_xp(GameState.progression.xp_to_next(1))
+	var level := _spawn_trail()
 	await get_tree().physics_frame
-	_check(is_equal_approx(level.player.base_damage, SWORD.value_at(2)), "Espada nv 2 → ATK %.0f" % SWORD.value_at(2))
-	_check(is_equal_approx(level.player.health.max_health, ARMOR.value_at(1)), "Armadura nv 1 → vida %.0f" % ARMOR.value_at(1))
+	var bonus := GameState.level - 1
+	var expected_damage := SWORD.value_at(2) + bonus * GameState.progression.damage_per_level
+	var expected_health := ARMOR.value_at(1) + bonus * GameState.progression.health_per_level
+	_check(is_equal_approx(level.player.base_damage, expected_damage), "Espada nv 2 + nível 2 → ATK %.0f" % expected_damage)
+	_check(is_equal_approx(level.player.health.max_health, expected_health), "Armadura nv 1 + nível 2 → vida %.0f" % expected_health)
 	_check(is_equal_approx(level.player.damage_reduction, ARMOR.secondary_at(1)), "Armadura nv 1 → redução %.0f%%" % (ARMOR.secondary_at(1) * 100.0))
 	level.queue_free()
 	await get_tree().physics_frame
 
 
-func _test_defeat_gold() -> void:
-	print("\n[Ouro na derrota]")
+func _test_death_respawn() -> void:
+	print("
+[Morte: volta à fogueira]")
 	GameState.reset()
-	var level := _spawn_arena()
+	var level := _spawn_trail()
 	await get_tree().physics_frame
+	var start := level.player.global_position
+	level.player.global_position = start + Vector3(0.0, 0.5, -6.0)
 	level.run_gold = 35
-	level._finish(false)
+	var info := DamageInfo.new()
+	info.amount = 9999.0
+	level.player.hurtbox.receive_hit(info)
+	_check(level.player.health.is_dead, "golpe fatal mata o herói")
+	await level.player_respawned
 	var expected := floori(35 * level.rewards.death_keep_fraction)
-	_check(level.gold_earned == expected and GameState.gold == expected, "mantém %d de 35 (50%%)" % expected)
-	var has_result := false
-	for child: Node in level.get_children():
-		has_result = has_result or child is ResultScreen
-	_check(has_result, "mostra a tela de resultado")
+	_check(GameState.gold == expected and level.run_gold == 0, "guarda %d de 35 de ouro não guardado (50%%)" % expected)
+	_check(not level.player.health.is_dead and is_equal_approx(level.player.health.current_health, level.player.health.max_health),
+			"volta com a vida cheia")
+	_check(level.player.global_position.distance_to(start) < 1.5, "volta ao ponto de partida (sem fogueira acesa)")
 	level.queue_free()
 	await get_tree().physics_frame
 
@@ -110,9 +136,10 @@ func _test_pause() -> void:
 	await get_tree().process_frame
 
 
-func _spawn_arena() -> Level:
-	var level := ARENA_SCENE.instantiate() as Level
+func _spawn_trail() -> WorldLevel:
+	var level := TRAIL_SCENE.instantiate() as WorldLevel
 	level.show_element_select = false
+	level.capture_mouse = false
 	add_child(level)
 	return level
 

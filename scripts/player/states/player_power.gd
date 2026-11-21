@@ -11,7 +11,7 @@ func enter(msg: Dictionary = {}) -> void:
 	_slot = msg.get("slot", 0)
 	_timer = player.powers.power(_slot).cast_time
 	_released = false
-	player.set_pose_cast()
+	player.play_power_cast(player.powers.power(_slot))
 
 
 func physics_update(delta: float) -> void:

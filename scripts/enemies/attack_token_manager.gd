@@ -15,13 +15,20 @@ func _ready() -> void:
 	_cooldown = _random_interval()
 
 
+## Inscreve o inimigo na fila de ataques. Pode ser chamado de novo para um inimigo que
+## morreu e foi revivido (os sinais só são ligados uma vez).
 func register(enemy: Enemy) -> void:
 	if enemy in _enemies:
 		return
 	_enemies.append(enemy)
-	enemy.attack_finished.connect(_on_attack_finished.bind(enemy))
-	enemy.died.connect(_unregister.bind(enemy))
-	enemy.tree_exiting.connect(_unregister.bind(enemy))
+	var on_finished := _on_attack_finished.bind(enemy)
+	var on_gone := _unregister.bind(enemy)
+	if not enemy.attack_finished.is_connected(on_finished):
+		enemy.attack_finished.connect(on_finished)
+	if not enemy.died.is_connected(on_gone):
+		enemy.died.connect(on_gone)
+	if not enemy.tree_exiting.is_connected(on_gone):
+		enemy.tree_exiting.connect(on_gone)
 
 
 func _physics_process(delta: float) -> void:

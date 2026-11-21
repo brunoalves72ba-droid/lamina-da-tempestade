@@ -1,8 +1,8 @@
-# GDD — Documento de Design (MVP)
+# GDD — Documento de Design
 
-> **Título provisório:** a definir · **Plataforma:** PC (Windows), teclado + mouse · **Engine:** Godot 4.7.2
-> **Status:** escopo do MVP fechado em 20/11/2026 · herói com poderes de raio adicionado em 20/11/2026 · Regras de código em [CLAUDE.md](CLAUDE.md)
-> **Referência de mecânicas:** RPGs de ação on-rails no estilo de Iron Blade (duelos com parry, avanço automático entre encontros, loja de melhorias). Só as **mecânicas** servem de referência: nome, personagens, arte, música e fases são **originais**.
+> **Título provisório:** "Lâmina da Tempestade" · **Plataforma:** PC (Windows), teclado + mouse · **Engine:** Godot 4.7.2
+> **Status:** MVP sobre trilhos concluído em 20/11/2026 (commit `e00443a`) · **reescrito para movimento livre em 21/11/2026** (branch `mundo-livre`) · Regras de código em [CLAUDE.md](CLAUDE.md)
+> **Referências de mecânicas:** duelos com parry e loja (estilo Iron Blade) + exploração linear em 3ª pessoa com câmera por cima do ombro e mira travada (estilo God of War). Só as **mecânicas** servem de referência: nome, personagens, arte, música e fases são **originais**.
 
 Todos os números deste documento são **valores iniciais de balanceamento**. Eles moram nos `.tres` de `data/` e devem ser ajustados jogando; quando mudarem, atualize as tabelas aqui.
 
@@ -10,57 +10,66 @@ Todos os números deste documento são **valores iniciais de balanceamento**. El
 
 ## 1. Visão
 
-Um RPG de ação 3D medieval sombrio em que o jogador não explora: ele **avança sobre trilhos** de um encontro para o próximo e todo o foco está no **duelo** — ler o aviso do inimigo, defender no tempo certo e punir com o contra-ataque.
+Um RPG de ação 3D medieval sombrio, de visual realista, em que o herói **percorre a pé** uma trilha por um vale de floresta morta até um santuário. No caminho há **clareiras de combate** fechadas por uma barreira de raios: só se sai delas vencendo. O foco é o **duelo**: ler o aviso do inimigo, defender ou esquivar no tempo certo e punir com o contra-ataque.
 
-O protagonista é um guerreiro **conjurador de raios**: a espada conduz eletricidade, e cada defesa perfeita e cada combo acumulam **Carga Estática**, que alimenta seus poderes de tempestade.
+O protagonista é um guerreiro **conjurador de raios**: a espada conduz eletricidade, e cada defesa perfeita e cada combo acumulam **Carga Estática**, que alimenta seus poderes de tempestade. Inimigos derrotados dão **ouro e experiência**; quanto mais o herói evolui, **mais inimigos surgem e mais fortes eles ficam**.
 
 **Pilares**
-1. **Leitura e timing** — todo ataque inimigo é avisado e pode ser defendido; o erro é sempre do jogador, nunca do jogo.
-2. **Impacto** — cada golpe tem peso (hitstop, faíscas, estalo elétrico, flash de luz); o último golpe de uma onda é um momento.
-3. **A tempestade como recompensa** — jogar bem (parry, combos) carrega o herói; descarregar a tempestade é o clímax do encontro.
-4. **Progresso curto e claro** — partidas de poucos minutos, ouro → upgrade → jogar de novo mais forte.
+1. **Leitura e timing** — todo ataque inimigo é avisado e pode ser aparado, bloqueado ou esquivado.
+2. **Impacto** — cada golpe tem peso (hitstop, faíscas, estalo elétrico, flash de luz, cambalear).
+3. **A tempestade como recompensa** — jogar bem carrega o herói; descarregar a tempestade é o clímax da clareira.
+4. **Jornada que cresce** — XP e níveis no caminho, ouro para o ferreiro, inimigos que acompanham a sua força.
 
-## 2. Escopo do MVP
+## 2. Escopo atual
 
 **Dentro**
-- 1 fase (`arena_01`) com 3 encontros sobre trilho.
-- 1 personagem jogável (conjurador de raios) com espada, Dardo de Raio automático, 3 poderes elétricos e o recurso Carga Estática.
-- 3 tipos de inimigo (Soldado, Besteiro, Elite), cada um podendo ter qualquer um dos 3 elementos.
-- Ciclo elemental Divino > Demoníaco > Heroico > Divino.
-- Loja pós-fase com 2 upgrades lineares (Espada, Armadura).
-- Save em JSON, menu principal, pausa, export para Windows.
+- 1 percurso (`trail_01`, ~250 m) com 5 clareiras, 4 fogueiras de checkpoint, patrulhas e um santuário final.
+- Herói conjurador de raios com movimento livre, corrida, esquiva, bloqueio, combo, parry, Dardo de Raio, Passo Relâmpago, 3 poderes e Carga Estática.
+- 3 tipos de inimigo (Soldado, Besteiro, Elite) com perseguição, cerco, reações e os 3 elementos.
+- XP e níveis (persistentes), escala de inimigos pelo nível, loja (Espada, Armadura), save em JSON, menus, pausa com qualidade gráfica, export para Windows.
+
+**Pendente**
+- Corpo humano realista: hoje herói e inimigos usam o manequim X Bot da Mixamo, já animado (ver §15).
 
 **Fora (backlog, ver §13)**
-- Esquiva, chefe, múltiplas fases, itens equipáveis, troca de elemento em combate, combo rítmico com bônus de tempo, localização, controle/gamepad.
+- Chefe, mais percursos, itens equipáveis, troca de elemento em combate, gamepad, localização.
 
 ## 3. Controles
 
 | Ação | Teclas | Observação |
 |---|---|---|
-| Atacar | LMB / J | combo de 3 golpes; em alvo distante lança o Dardo de Raio e avança |
-| Parry | RMB / K | ver §6.2 |
-| Alvo anterior / próximo | A / D, roda do mouse | ordem da esquerda para a direita na tela |
-| Poderes de raio | 1 / 2 / 3 | 1 e 2 com cooldown; 3 exige Carga cheia |
-| Pausa | Esc / P | |
+| Andar | WASD | relativo à câmera |
+| Câmera | mouse | gira em volta do herói (por cima do ombro) |
+| Correr | Shift | não funciona com alvo travado |
+| Esquivar | Espaço | invencível nos primeiros 0,3 s; também cancela a recuperação de um golpe |
+| Travar alvo | Q / botão do meio | trava no inimigo mais perto do centro da tela; de novo destrava |
+| Trocar alvo travado | Tab / roda do mouse | esquerda ↔ direita na tela |
+| Atacar | LMB / J | combo de 3 golpes; com alvo travado e distante: Dardo de Raio + Passo Relâmpago |
+| Parry / Bloquear | RMB / K | toque no tempo certo = parry (§6.2); segurado = bloqueio |
+| Poderes de raio | 1 / 2 / 3 | 1 e 2 com recarga; 3 exige Carga cheia |
+| Pausa | Esc / P | continuar, gráficos, som, recomeçar, sair |
 
 ## 4. Loop de jogo
 
 ```
-Menu principal → Escolha do elemento da espada → Fase
-   Fase: [Trilho → Encontro 1] → [Trilho → Encontro 2] → [Trilho → Encontro 3]
-→ Tela de resultado (ouro ganho) → Loja de upgrades → Jogar de novo / Menu
+Menu principal → Escolha do elemento → Trilha
+   Trilha: andar → patrulhas → Clareira (barreira, ondas) → Fogueira (cura, guarda ouro, salva) → ... → Santuário
+→ Tela de resultado (ouro) → Ferreiro (loja) → Jogar de novo / Menu
 ```
 
-- **Morte:** a fase termina; o jogador mantém **50%** do ouro coletado nela.
-- **Vitória:** mantém 100% + bônus de conclusão.
+- **XP:** cada inimigo dá XP; subir de nível cura por completo e aumenta vida (+8) e ATK (+1).
+- **Ouro:** o ouro coletado fica "no bolso" até a próxima fogueira (ou o santuário), onde é guardado.
+- **Morte:** o herói volta à última fogueira acesa (ou ao início), com vida cheia; guarda **50%** do ouro do bolso. A clareira em andamento recomeça.
+- **Vitória (santuário):** guarda o ouro do bolso + **50** de bônus.
 
-## 5. Movimentação sobre trilhos e câmera
+## 5. Movimento livre e câmera
 
-- A fase tem um `Path3D` com o trajeto. O `RailController` amostra a curva e move o herói (sem `PathFollow3D`, para o herói poder sair do trilho no Passo Relâmpago). Pontos de encontro são nós `Encounter`; o herói para no ponto do trilho mais próximo de cada um.
-- **Fora de combate (estado `Travel`):** o jogador corre automaticamente pelo trilho até o próximo `Encounter` (velocidade **6 m/s**, aceleração e desaceleração suaves). Input de combate é ignorado.
-- **No encontro:** o jogador para, os inimigos surgem (spawn com animação de entrada de **1,0 s**, sem atacar) e o combate começa.
-- **Câmera:** terceira pessoa por trás e acima do ombro (~**4 m** atrás, **2 m** acima). No combate, enquadra jogador + alvo atual (interpolação suave); em viagem, segue o trilho olhando adiante. Leve *camera shake* em golpes recebidos e golpes fortes.
-- No encontro, o jogador só sai do lugar para **avançar até um alvo** (ver §6.4) e fica onde o avanço terminou. Ao limpar o encontro, ele volta suavemente ao trilho e segue viagem.
+- **Herói:** CharacterBody3D com gravidade. Andar **4,2 m/s**, correr **6,8 m/s**, aceleração/frenagem suaves, giro do corpo para a direção do movimento (12 rad/s). Nas ações de combate, vira na hora para o alvo próximo (até **3,5 m**, "mira suave"). Golpes avançam **0,6 m** se o alvo não estiver colado.
+- **Esquiva:** **4 m** em 0,42 s (impulso que desacelera), invencível por **0,3 s**, intervalo mínimo 0,15 s.
+- **Bloqueio:** segurar o botão de defesa depois da janela de parry. Anda a **1,8 m/s** e recebe só **30%** do dano, sem cambalear.
+- **Atingido:** empurrão para trás (4 m/s, desacelerando) e 0,3 s sem agir.
+- **Câmera:** `ThirdPersonCamera` por cima do ombro direito, braço de **3,6 m** com `SpringArm3D` (encurta em paredes), inclinação de −55° a 35°. Com alvo travado, gira sozinha para enquadrar herói e alvo. O WASD é relativo à rotação da câmera.
+- **Alvos (`Targeting`):** sem travar, o alvo é o inimigo mais perto até **10 m** (anel azul). Travado (anel vermelho), vale até **20 m**; se o alvo morre, trava no próximo mais perto.
 
 ## 6. Combate
 
@@ -178,18 +187,35 @@ Ciclo: **Divino > Demoníaco > Heroico > Divino**.
 - Atordoado (após parry) recebe dano normalmente e não ataca; ao fim do atordoamento devolve o token.
 - Cada inimigo tem `EnemyData` (status) + elemento definido na onda.
 
-## 9. A fase: `arena_01`
+## 9. O percurso: `trail_01`
 
-Visual: ruínas de fortaleza à noite, low-poly escuro com neblina (`WorldEnvironment` com fog volumétrico), tochas como pontos de luz quentes contra um ambiente frio. Relâmpagos distantes iluminam a cena de tempos em tempos, e ficam mais frequentes quando a Carga do herói está cheia.
+Vale de floresta morta à noite: céu estrelado (HDRI), lua com sombras suaves, neblina volumétrica, paredões de rocha, trilha de lama, troncos secos, tocos, samambaias e rochas reais (assets CC0 do Poly Haven em `assets/environment/`). O terreno é gerado pela trilha (`TrailTerrain`): fundo do vale plano, clareiras largas e paredões que guiam o jogador.
 
-| Encontro | Composição (elemento) |
+| Distância | O quê |
 |---|---|
-| 1 | 3 Soldados (Demoníaco, Demoníaco, Heroico) |
-| 2 | 2 Soldados (Divino, Heroico) + 2 Besteiros (Demoníaco, Divino) |
-| 3 | 1 Elite (Heroico) + 2 Soldados (Divino, Demoníaco) |
+| 16 m | patrulha |
+| 34 m | Clareira 1 — Clareira dos Corvos: 2 Soldados |
+| 57 m | Fogueira 1 |
+| 64 m | patrulha |
+| 82 m | Clareira 2 — Vale das Cinzas: 2 Soldados + 1 Besteiro |
+| 105 m | Fogueira 2 |
+| 112 m | patrulha |
+| 130 m | Clareira 3 — Ponte de Pedra: 2 Soldados, depois 1 Soldado + 2 Besteiros |
+| 153 m | Fogueira 3 |
+| 160 m | patrulha |
+| 178 m | Clareira 4 — Bosque Morto: Elite + 2 Soldados |
+| 200 m | Fogueira 4 |
+| 205 m | patrulha |
+| 222 m | Clareira 5 — Portão do Santuário: 3 Soldados + 1 Besteiro, depois Elite + 2 Soldados |
+| ~250 m | Santuário (estátua gótica, ruínas de tijolo): vitória se todas as clareiras foram vencidas |
 
-- Cada encontro é uma única onda no MVP (`WaveData` já suporta várias ondas por encontro).
-- Bônus de conclusão da fase: **50 de ouro**.
+- **Clareiras:** ao entrar (até 14 m do centro) ergue-se uma barreira de raios com raio de 17 m; os inimigos surgem à frente, na direção da trilha. Vencer cura **25%** da vida.
+- **Fogueiras:** acendem ao chegar perto ou ao passar por elas na trilha; curam tudo, guardam o ouro e salvam.
+- **Escala pelo nível do herói** (`data/progression/progression.tres`): +0,5 inimigo extra por onda por nível (máx. +6), +6% de vida e +4% de dano dos inimigos por nível; patrulhas de 1 a 3 Soldados.
+- **XP:** Soldado 20, Besteiro 25, Elite 90. Nível 2 pede 60 XP; cada nível seguinte pede 30% a mais (máx. nível 30).
+- **Qualidade gráfica:** Baixo / Médio / Alto na pausa. GPU integrada começa no Baixo (medido numa Intel Iris Xe: ~42 FPS no Baixo, ~26 no Médio).
+
+> A arena sobre trilhos (`arena_01`) foi aposentada em 21/11/2026; está no commit `e00443a`.
 
 ## 10. Progressão e loja
 
@@ -262,6 +288,17 @@ Dois upgrades lineares, **5 níveis** cada:
 - [x] Export Windows: `build/windows/LaminaDaTempestade.exe` (preset "Windows Desktop", pacote embutido, sem a pasta `tests/`)
 - **Aceite:** jogar → vencer ou morrer → comprar upgrade → fechar o jogo → reabrir e o progresso continuar lá. A parte de código está verificada por `tests/auto_meta_test.tscn` (loja, save, upgrades aplicados, ouro na derrota, pausa) e por `tests/auto_rail_test.tscn` (ouro da vitória = 134 dos inimigos + 50 de bônus = 184).
 
+### M5 — Movimento livre, percurso e realismo (em andamento, 21/11/2026)
+- [x] Controle livre em 3ª pessoa: andar, correr, esquiva com invencibilidade, bloqueio, avanço nos golpes
+- [x] Câmera por cima do ombro (mouse, braço de mola, enquadramento com alvo travado) e mira travada
+- [x] Inimigos fluidos: percepção, corrida, cerco lateral, avanço durante o aviso, cambalear/empurrão, passos procedurais
+- [x] XP e níveis persistentes; inimigos extras e mais fortes conforme o nível
+- [x] Percurso `trail_01`: terreno gerado, texturas fotográficas, vegetação/rochas reais, 5 clareiras com barreira, 4 fogueiras, patrulhas, santuário
+- [x] Iluminação noturna realista (HDRI, lua, neblina volumétrica, SSAO) com presets de qualidade
+- [x] Personagens animados com animações da Mixamo (29 movimentos escolhidos de 107), espada/escudo/besta presos aos ossos
+- [ ] Trocar o manequim X Bot por um personagem humano da Mixamo (mesmo esqueleto, mesmas animações)
+- **Aceite:** `tests/auto_trail_test.tscn` — piloto automático percorre a trilha inteira, vence as 5 clareiras, acende as 4 fogueiras, sobe de nível e chega ao santuário (~110 s de jogo).
+
 ## 13. Backlog pós-MVP
 
 Upgrade dos poderes de raio (ex.: +dano elétrico, +1 salto na Corrente, Carga inicial) · inimigos resistentes ou que absorvem raio · esquiva com invencibilidade · combo rítmico (bônus por acertar o tempo) · chefe com fases · mais fases e trilhos com bifurcação · itens equipáveis e armas com elemento próprio · elemento nos ataques inimigos · troca de elemento em combate · suporte a gamepad · localização · opções de gráfico.
@@ -271,3 +308,26 @@ Upgrade dos poderes de raio (ex.: +dano elétrico, +1 salto na Corrente, Carga i
 - Título do jogo (no menu está o provisório "Lâmina da Tempestade", em `scenes/main/main_menu.gd`), nome/aparência do protagonista e a origem dos seus poderes de raio.
 - Animação: hoje tudo é animado por código (poses e tweens). Animação esquelética de verdade exigiria modelos riggados.
 - Recuperação de 20% de HP entre encontros: validar no M2 se a fase fica fácil ou difícil demais.
+
+## 15. Personagens animados (Mixamo)
+
+Fonte: pacotes "Pro Sword and Shield Pack" e "Pro Magic Pack" da Mixamo (com o manequim X Bot). Das 107 animações, 29 foram escolhidas medindo duração, deslocamento e o instante do golpe (pico de velocidade da mão):
+
+| Uso | Animação (arquivo original) |
+|---|---|
+| Parado / andar / correr / costas | sword and shield idle, walk, run, walk (2), run (2) |
+| Sprint (Shift) | Standing Sprint Forward (magia) |
+| Andar/correr de lado (travado) | strafe (2)/strafe (esq./dir.), strafe (3)/(4) correndo |
+| Combo 1-2-3 | slash → attack (4) → attack (3) (golpe forte) |
+| Parry / bloqueio / golpe no escudo | block, block idle, block (2) |
+| Atingido / morte | impact (3), death |
+| Esquiva | jump (salto rasante; os pacotes não têm rolamento) |
+| Dardo de Raio / Corrente / Fúria | 1H Magic Attack 02, 1H Cast Spell 01, 2H Magic Area Attack 01 |
+| Lâmina Voltaica | slash (4) |
+| Inimigo: golpe / golpe da Elite / tiro | slash, attack (2), 1H Magic Attack 01 (sincronizados com o aviso de 0,8 s) |
+| Inimigo: surgir / atordoado / cambalear | Crouch To Standing Idle, React Large From Front, impact (2) |
+
+- O deslocamento das animações é removido (o código move os personagens); a velocidade de andar/correr é ajustada à velocidade real para os pés não deslizarem.
+- Equipamentos presos aos ossos: espada (lâmina brilha na cor do elemento), escudo realista do Poly Haven (herói), escudo redondo (Soldado/Elite), besta (Besteiro), chifres (Elite). Os inimigos têm contorno na cor do elemento e corpo na cor do tipo.
+- **Próximo passo:** baixar um personagem humano da Mixamo (ex.: "Paladin W/ Prop J Nordstrom", FBX, T-pose) para `assets/characters/` e apontar o `model_scene` do `AnimatedBody` para ele: as mesmas animações funcionam.
+- Desempenho medido (Iris Xe, preset Baixo): ~55 FPS em combate com 3 inimigos animados.

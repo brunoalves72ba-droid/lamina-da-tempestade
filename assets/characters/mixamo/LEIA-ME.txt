@@ -1,0 +1,1 @@
+Coloque aqui os .fbx da Mixamo (heroi.fbx, inimigo_1.fbx, inimigo_2.fbx) e o .zip do Sword And Shield Pack.

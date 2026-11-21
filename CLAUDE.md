@@ -1,6 +1,6 @@
 # CLAUDE.md — Regras do projeto
 
-RPG de ação 3D para PC (medieval sombrio) com combate rítmico de ataque/parry, movimentação sobre trilhos entre encontros e um herói conjurador de raios (poderes elétricos alimentados por Carga Estática).
+RPG de ação 3D para PC (medieval sombrio, visual realista) com movimento livre em 3ª pessoa, combate de ataque/parry/bloqueio/esquiva, um percurso com clareiras de combate e um herói conjurador de raios (poderes elétricos alimentados por Carga Estática). XP e níveis fazem surgir mais inimigos.
 O design completo está em [GDD.md](GDD.md). **Leia o GDD antes de implementar qualquer sistema** e mantenha-o atualizado quando uma decisão de design mudar.
 
 ## Ambiente
@@ -15,35 +15,40 @@ O design completo está em [GDD.md](GDD.md). **Leia o GDD antes de implementar q
   "$GODOT" --headless --path . --quit-after 120
   ```
   Para checar um script isolado: `"$GODOT" --headless --path . --check-only --script res://caminho/script.gd`
-- **Testes automáticos de combate** (código de saída 0 = passou):
+- **Testes automáticos** (código de saída 0 = passou):
   ```bash
   "$GODOT" --headless --path . --fixed-fps 60 res://tests/auto_combat_test.tscn
-  "$GODOT" --headless --path . --fixed-fps 60 res://tests/auto_rail_test.tscn
+  "$GODOT" --headless --path . --fixed-fps 60 res://tests/auto_trail_test.tscn
   "$GODOT" --headless --path . --fixed-fps 60 res://tests/auto_meta_test.tscn
   ```
-  `auto_meta_test` cobre loja, save, upgrades, ouro e pausa. **Todo teste começa com `SaveManager.persist = false` e `GameState.reset()`**, para nunca gravar no save do jogador.
-  `auto_combat_test` cobre as mecânicas no sandbox; `auto_rail_test` joga a `arena_01` inteira com um piloto automático. Rode os dois depois de qualquer mudança em combate, inimigos ou fase. Toda mecânica nova ganha checagens num deles (ou num irmão em `tests/`).
+  - `auto_combat_test`: mecânicas no sandbox (parry, contra-ataque, combo, Besteiro, Dardo/Passo, elementos, Carga, poderes, Elite, andar, esquiva, bloqueio).
+  - `auto_trail_test`: piloto automático percorre `trail_01` inteira (clareiras, fogueiras, XP, santuário). Dirige o herói por `Player.use_scripted_input`/`scripted_move_input`, relativo a `view_yaw`.
+  - `auto_meta_test`: loja, save, XP/níveis, upgrades + nível no herói, morte com volta à fogueira, pausa.
+  - Rode os três depois de qualquer mudança em combate, inimigos, progressão ou fase. **Todo teste começa com `SaveManager.persist = false` e `GameState.reset()`**, para nunca gravar no save do jogador.
 - **Gerar o .exe do Windows** (templates 4.7.2 já instalados em `%APPDATA%/Godot/export_templates/4.7.2.stable`):
   ```bash
   "$GODOT" --headless --path . --export-release "Windows Desktop" build/windows/LaminaDaTempestade.exe
   ```
   `build/` está no `.gitignore`. Builds oficiais não aceitam abrir uma cena pela linha de comando; para testar uma cena do pacote exportado use `"$GODOT" --main-pack build/windows/LaminaDaTempestade.exe res://caminho/cena.tscn`.
-- **Cena principal:** `scenes/main/main_menu.tscn` (F5). Fase: `scenes/levels/arena_01.tscn`. Sandbox de combate: `tests/sandbox_combat.tscn` (F6). Troque de cena só por `Scenes.go()` (`scripts/main/scenes.gd`), que também despausa e zera o hitstop.
+- **Cena principal:** `scenes/main/main_menu.tscn` (F5). Fase: `scenes/levels/trail_01.tscn`. Sandbox de combate: `tests/sandbox_combat.tscn` (F6). Troque de cena só por `Scenes.go()` (`scripts/main/scenes.gd`), que também despausa e zera o hitstop.
 - Nos testes, espere sempre em **tempo de jogo** (`create_timer(t, true, true)`), porque o hitstop desacelera o tempo. Conecte ou desligue `auto_attack` *antes* de esperar um sinal que pode disparar durante outra espera; os dois bugs intermitentes do M3 vieram de avisos perdidos assim.
 - `--script` **não carrega autoloads**: para rodar algo que usa `Events`/`GameState`, rode uma cena (`res://...tscn`), não um script solto.
 - Os avisos "ObjectDB instances were leaked" ao sair vêm do cache de sons sintetizados (`SfxLibrary`) e são esperados.
 - Nunca edite nada dentro de `.godot/` nem arquivos `*.import`; são gerados pelo editor.
 - O projeto está dentro do OneDrive. Se aparecerem erros de arquivo travado ou de import, a primeira suspeita é a sincronização do `.godot/`.
+- **Desempenho:** a máquina de desenvolvimento tem GPU integrada (Intel Iris Xe; o D3D12 a reporta como "dedicada", por isso `GameState.is_integrated_gpu()` também olha o nome). Meça FPS na janela (não headless) antes de aceitar efeito novo. O gargalo histórico foi o shader do terreno (texturas por pixel): mantenha `shaders/terrain.gdshader` com poucas leituras e desvio por peso.
+- **Git:** repositório local. `main` = MVP sobre trilhos (commit `e00443a`); `mundo-livre` = reescrita atual. Faça commits só quando o usuário pedir.
 
 ## Estrutura de pastas
 
 ```
-assets/      modelos, texturas, materiais, áudio, fontes (nada de lógica)
+assets/      environment/ (CC0 Poly Haven: hdri, textures, models), characters/mixamo/ (nada de lógica)
 data/        recursos .tres com TODOS os números de balanceamento
-scenes/      main/, levels/, player/, enemies/, combat/, vfx/
-scripts/     autoload/, components/, player/, enemies/, rail/, combat/, resources/, audio/
+scenes/      main/, levels/, player/, enemies/, combat/, vfx/, camera/
+scripts/     autoload/, components/, player/, enemies/, world/, camera/, combat/, resources/, audio/, vfx/, main/
+shaders/     shaders próprios (terreno)
 ui/          hud/, menus/, upgrade_shop/, theme/ (cena + script juntos)
-tests/       cenas sandbox para testar sistemas isolados
+tests/       sandbox e testes automáticos
 ```
 
 - Scripts de gameplay ficam em `scripts/` espelhando a pasta da cena em `scenes/`. Exceção: UI mantém `.tscn` e `.gd` juntos em `ui/`.
@@ -67,13 +72,16 @@ tests/       cenas sandbox para testar sistemas isolados
 - **Signal bus** `Events` (autoload) apenas para eventos globais entre sistemas desacoplados (`enemy_died`, `wave_cleared`, `gold_changed`, `encounter_started`). Eventos locais usam sinais do próprio nó.
 - **Autoloads permitidos:** `Events`, `GameState` (ouro, níveis de upgrade, elemento escolhido), `SaveManager`. Novo autoload só com justificativa no GDD.
 - **Dados fora do código:** dano, HP, cooldowns, janelas de tempo, custos e composição de ondas vivem em `Resource`s customizados (`WeaponData`, `EnemyData`, `WaveData`, `UpgradeData`, `SkillData`) salvos em `data/`. Nenhum número mágico de balanceamento no script.
-- **Máquinas de estado** para jogador e inimigos: um nó `StateMachine` com estados como nós filhos (`Idle`, `Attack`, `Parry`, `Stunned`, `Travel`…). Transições explícitas, nunca booleanos soltos (`is_attacking`, `is_parrying`…).
+- **Máquinas de estado** para jogador e inimigos: um nó `StateMachine` com estados como nós filhos (`Idle`, `Attack`, `Parry`, `Block`, `Dodge`, `Stunned`, `Stagger`…). Transições explícitas, nunca booleanos soltos (`is_attacking`, `is_parrying`…).
   - Estados herdam de `PlayerState`/`EnemyState` e acessam o dono pelo `owner`. Golpes recebidos passam por `PlayerState.handle_hit()` (é assim que o Parry intercepta o dano).
   - Não troque de estado de dentro de um callback de colisão de *outra* máquina; marque um flag e deixe o próprio estado transicionar no `physics_update` (ex.: `Enemy.strike_was_parried`).
 - **Parry e Hitbox:** a `Hitbox` monitora sempre e resolve o acerto no mesmo frame em que é armada, para a janela de parry ser exata. O atacante passa `DamageInfo.on_parried` (Callable); o defensor chama ao aparar, sem um conhecer o tipo do outro.
-- **Fase sobre trilhos:** `Level` orquestra `RailController` (move o herói pela curva), `WaveSpawner` (cria ondas a partir de `WaveData`/`SpawnEntry`) e `AttackTokenManager` (um ataque por vez). Inimigos ficam no grupo `Enemy.GROUP`; `Targeting` (filho do Player) escolhe o alvo a partir dele.
+- **Movimento do herói:** estados pedem movimento a cada frame com `Player.locomote(speed)` (WASD relativo à câmera) ou `Player.push(velocidade)` (avanço, esquiva, empurrão); o `Player` aplica aceleração, gravidade, `move_and_slide` e o giro do corpo. A câmera (`ThirdPersonCamera`) escreve `Player.view_yaw` todo frame.
+- **Mira:** `Targeting` (filho do Player) tem alvo suave (mais perto) e travado (`locked`). `set_target()` e `cycle()` travam. Dardo/Passo Relâmpago só saem com alvo travado.
+- **Fase de percurso:** `WorldLevel` monta a trilha (curva dos `waypoints`), `TrailTerrain` (terreno + colisão por heightmap + `height_at`), `PropScatter` (cenário a partir de `PropEntry`), `CombatZone` (barreira + ondas, herda `Encounter`), `Checkpoint` (fogueiras), patrulhas, XP, morte/volta e vitória. `WaveSpawner` cria ondas a partir de `WaveData`/`SpawnEntry` e aplica a escala do nível (`ProgressionData`); `AttackTokenManager` garante um ataque por vez (inimigos revividos precisam de `register()` de novo).
+- **Inimigos:** movimento em `Enemy._desired_velocity()` (perceber → correr → cercar de lado; avançar durante o aviso; empurrão ao cambalear). Golpe forte faz cambalear (`Stagger`) quem não tem `has_poise`.
 - **Golpes à distância** (Dardo de Raio, virote) acertam chamando `Hurtbox.receive_hit()` diretamente no fim do voo, sem Area3D, para o tempo de impacto ser exato.
-- **Progresso:** `GameState` guarda ouro, níveis de upgrade (`level_of`, `try_buy`) e elemento; `SaveManager` grava/lê JSON versionado. A fase aplica os upgrades no herói com `Player.apply_stats()`; nunca altere os `.tres` em tempo de execução.
+- **Progresso:** `GameState` guarda ouro, nível/XP (`add_xp`, `leveled_up`), níveis de upgrade (`level_of`, `try_buy`), elemento e qualidade gráfica; `SaveManager` grava/lê JSON versionado. A fase aplica os upgrades no herói com `Player.apply_stats()`; nunca altere os `.tres` em tempo de execução.
 - **Menus** (pausa, resultado, loja, menu principal) são montados em código com `MenuKit` (`ui/theme/menu_kit.gd`), para manter o mesmo visual. Telas que funcionam com o jogo pausado usam `process_mode = ALWAYS`.
 - **Sons placeholder** via `SfxLibrary.play(node, &"nome")` (síntese, sem arquivos) até o M4.
 - **Componentes reutilizáveis** em `scripts/components/`: `HealthComponent`, `Hitbox`, `Hurtbox`, `Cooldown`. Dano sempre trafega como um objeto `DamageInfo` (quantidade, elemento, se é golpe forte, origem).
@@ -90,8 +98,13 @@ Use **somente ações do InputMap**, nunca teclas cruas no código.
 |---|---|
 | `attack` | Botão esquerdo do mouse, J |
 | `parry` | Botão direito do mouse, K |
-| `target_prev` | A, roda do mouse para cima |
-| `target_next` | D, roda do mouse para baixo |
+| `move_forward` / `move_back` / `move_left` / `move_right` | W / S / A / D |
+| `sprint` | Shift |
+| `dodge` | Espaço |
+| `lock_on` | Q, botão do meio do mouse |
+| `target_prev` | roda do mouse para cima |
+| `target_next` | Tab, roda do mouse para baixo |
+| `interact` | E (reservado) |
 | `skill_1` / `skill_2` / `skill_3` | 1 / 2 / 3 |
 | `pause` | Esc, P |
 | `debug_reset` | R (só em cenas de teste) |
@@ -115,7 +128,9 @@ Nomeie as camadas em *Project Settings → Layer Names* e use esses nomes nos co
 
 - Pode criar/editar `.tscn` e `.tres` como texto, mas mantenha-os simples e válidos: **não invente `uid://`** (omita; o Godot regenera) e não deixe `ext_resource` órfão.
 - Depois de criar ou editar cenas, rode a validação headless acima e corrija qualquer erro antes de seguir.
-- **Arte com primitivas:** personagens e cenário são compostos de `MeshInstance3D` com primitivas (cilindros, esferas, cápsulas, caixas) dentro do nó `Model`. Scripts só acessam partes com nome único (`%BodyMesh`, `%SwordPivot`, `%Helmet`, `%Shield`...). As variações de inimigo saem de `EnemyData.model_variant`. Peças dentro de `Ruins` ganham colisão automática ao carregar a fase.
+- **Personagens animados:** `AnimatedBody` (`scripts/characters/animated_body.gd`, nó `%Body` dentro de `%Model`) carrega o modelo da Mixamo (`assets/characters/xbot/xbot.fbx`) e a biblioteca `assets/characters/animations/combat_library.res`. Locomoção por `update_locomotion()`; ações por `play_action*` (use `play_action_hit_at` para golpes, com o instante de impacto em `AnimatedBody.IMPACT_TIME`). Armas em `Equipment` (presas a ossos `mixamorig_*`; na mão direita a lâmina sai em +X). Brilho por `flash()`/`set_rim()` (shader `shaders/rim_overlay.gdshader`). Variações de inimigo saem de `EnemyData.model_variant`.
+- **Mudou a seleção de animações?** Os `.fbx` ficam em `assets/characters/animations/` (com o nome lógico); refaça a biblioteca com `"$GODOT" --headless --path . --script res://tools/build_animation_library.gd` (tira o root motion e marca loops). Os `.fbx` de animação e `tools/` ficam fora do `.exe`.
+- **Cenário realista:** assets CC0 do Poly Haven em `assets/environment/` (glTF 1k, texturas 2k). Mapas `*_nor_gl_*` são importados como normal map. Prefira modelos com poucos polígonos (a GPU é integrada) e use `visibility_range_end` em objetos espalhados.
 
 ## Fluxo de trabalho
 
@@ -123,4 +138,4 @@ Nomeie as camadas em *Project Settings → Layer Names* e use esses nomes nos co
 - Ao concluir uma tarefa, diga como testar (cena + teclas) e o que **não** foi verificado.
 - Mudou um número de balanceamento ou uma regra? Atualize o `.tres` **e** a tabela correspondente no GDD.
 - Não adicione plugins/addons da Asset Library sem aprovação.
-- **Originalidade:** jogos citados como referência (ex.: Iron Blade) inspiram só mecânicas. Nunca use nomes, personagens, arte, modelos, música, sons ou layout de fases deles.
+- **Originalidade:** jogos citados como referência (ex.: Iron Blade, God of War) inspiram só mecânicas. Nunca use nomes, personagens, arte, modelos, música, sons ou layout de fases deles.

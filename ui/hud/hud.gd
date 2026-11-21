@@ -1,6 +1,6 @@
 class_name GameHUD
 extends CanvasLayer
-## HUD: vida do herói e do alvo atual, recarga do Dardo de Raio, encontro atual e feedback de combate.
+## HUD: vida, Carga, nível e XP do herói; alvo atual (travado ou não); poderes; ouro; objetivo; feedback.
 
 const PARRY_COLOR := Color(0.55, 0.85, 1.0)
 const COUNTER_COLOR := Color(1.0, 0.85, 0.3)
@@ -17,8 +17,9 @@ const STATE_NAMES: Dictionary = {
 	&"Dead": "Caído",
 	&"Bolt": "Dardo de Raio",
 	&"Dash": "Passo Relâmpago",
-	&"Travel": "Avançando",
 	&"Power": "Poder de raio",
+	&"Dodge": "Esquivando",
+	&"Block": "Bloqueando",
 }
 
 @export var feedback_hold_time: float = 0.5
@@ -44,6 +45,8 @@ var _charge_normal_style: StyleBox
 @onready var _power_slots_root: HBoxContainer = %PowerSlots
 @onready var _element_label: Label = %ElementLabel
 @onready var _gold_label: Label = %GoldLabel
+@onready var _xp_bar: ProgressBar = %XpBar
+@onready var _level_label: Label = %LevelLabel
 
 var _power_slots: Array[PowerSlot] = []
 
@@ -58,6 +61,24 @@ func _ready() -> void:
 
 func show_gold(amount: int) -> void:
 	_gold_label.text = "Ouro: %d" % amount
+
+
+## Texto livre no canto superior direito (objetivo, clareira atual).
+func show_encounter_text(text: String) -> void:
+	_encounter_label.text = text
+
+
+## Liga a barra de XP e o nível ao GameState.
+func bind_progression() -> void:
+	if not GameState.xp_changed.is_connected(_on_xp_changed):
+		GameState.xp_changed.connect(_on_xp_changed)
+	_on_xp_changed(GameState.xp, GameState.xp_needed(), GameState.level)
+
+
+func _on_xp_changed(xp: int, xp_needed: int, level: int) -> void:
+	_xp_bar.max_value = maxi(xp_needed, 1)
+	_xp_bar.value = xp
+	_level_label.text = "Nível %d   ·   XP %d / %d" % [level, xp, xp_needed]
 
 
 func _process(_delta: float) -> void:
@@ -81,6 +102,7 @@ func bind_player(player: Player) -> void:
 	player.died.connect(_on_player_died)
 	player.state_machine.state_changed.connect(_on_player_state_changed)
 	player.targeting.target_changed.connect(_on_target_changed)
+	player.targeting.lock_changed.connect(func(_locked: bool) -> void: _on_target_changed(player.target))
 	player.charge.changed.connect(_on_charge_changed)
 	player.power_denied.connect(_on_power_denied)
 	_on_charge_changed(player.charge.value, player.charge.maximum)

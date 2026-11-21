@@ -1,7 +1,7 @@
 extends PlayerState
-## Parado, pronto para agir. Prioridade: parry > poderes (1/2/3) > ataque.
-## O ataque depende da distância do alvo: perto = combo; longe = Dardo de Raio
-## (se pronto) seguido do Passo Relâmpago (GDD §6.4).
+## Livre: anda/corre com WASD (relativo à câmera). Prioridade das ações:
+## esquiva > parry > poderes (1/2/3) > ataque. O ataque depende da distância do alvo travado:
+## perto = combo; longe = Dardo de Raio (se pronto) seguido do Passo Relâmpago (GDD §6.4).
 
 
 func enter(_msg: Dictionary = {}) -> void:
@@ -9,7 +9,9 @@ func enter(_msg: Dictionary = {}) -> void:
 
 
 func physics_update(_delta: float) -> void:
-	if player.input_buffer.consume(&"parry"):
+	if player.can_dodge() and player.input_buffer.consume(&"dodge"):
+		machine.transition_to(&"Dodge")
+	elif player.input_buffer.consume(&"parry"):
 		machine.transition_to(&"Parry")
 	elif try_start_power():
 		return
@@ -19,3 +21,5 @@ func physics_update(_delta: float) -> void:
 			machine.transition_to(&"Attack", {"hit_index": player.next_combo_index()})
 		else:
 			machine.transition_to(next_state)
+	else:
+		player.locomote(player.data.sprint_speed if player.wants_to_sprint() else player.data.move_speed)

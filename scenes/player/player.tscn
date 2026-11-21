@@ -15,7 +15,6 @@
 [ext_resource type="Script" path="res://scripts/player/states/player_dead.gd" id="13_dead"]
 [ext_resource type="Script" path="res://scripts/player/states/player_bolt.gd" id="14_bolt"]
 [ext_resource type="Script" path="res://scripts/player/states/player_dash.gd" id="15_dash"]
-[ext_resource type="Script" path="res://scripts/player/states/player_travel.gd" id="16_travel"]
 [ext_resource type="Script" path="res://scripts/combat/targeting.gd" id="17_targeting"]
 [ext_resource type="Script" path="res://scripts/components/cooldown.gd" id="18_cooldown"]
 [ext_resource type="Script" path="res://scripts/player/static_charge.gd" id="19_charge"]
@@ -25,6 +24,11 @@
 [ext_resource type="Resource" path="res://data/powers/chain_lightning.tres" id="23_chain"]
 [ext_resource type="Resource" path="res://data/powers/storm_fury.tres" id="24_storm"]
 [ext_resource type="Script" path="res://scripts/player/states/player_power.gd" id="25_power_state"]
+[ext_resource type="Script" path="res://scripts/player/states/player_dodge.gd" id="26_dodge"]
+[ext_resource type="Script" path="res://scripts/player/states/player_block.gd" id="27_block"]
+[ext_resource type="Script" path="res://scripts/characters/animated_body.gd" id="90_body"]
+[ext_resource type="PackedScene" path="res://assets/characters/xbot/xbot.fbx" id="91_xbot"]
+[ext_resource type="AnimationLibrary" path="res://assets/characters/animations/combat_library.res" id="92_anims"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -127,7 +131,7 @@ size = Vector3(1.6, 1.4, 1.8)
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 0
-motion_mode = 1
+motion_mode = 0
 script = ExtResource("1_player")
 data = ExtResource("2_data")
 weapon = ExtResource("3_weapon")
@@ -139,77 +143,12 @@ shape = SubResource("CapsuleShape3D_body")
 [node name="Model" type="Node3D" parent="."]
 unique_name_in_owner = true
 
-[node name="BodyMesh" type="MeshInstance3D" parent="Model"]
+[node name="Body" type="Node3D" parent="Model"]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.24, 0)
-mesh = SubResource("CylinderMesh_torso")
-
-[node name="Belt" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.93, 0)
-mesh = SubResource("CylinderMesh_belt")
-
-[node name="Skirt" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
-mesh = SubResource("CylinderMesh_skirt")
-
-[node name="LegL" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0.39, 0)
-mesh = SubResource("CapsuleMesh_leg")
-
-[node name="LegR" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 0.39, 0)
-mesh = SubResource("CapsuleMesh_leg")
-
-[node name="PauldronL" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1.15, 0, 0, 0, 0.75, 0, 0, 0, 1.15, -0.36, 1.5, 0)
-mesh = SubResource("SphereMesh_pauldron")
-
-[node name="PauldronR" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1.15, 0, 0, 0, 0.75, 0, 0, 0, 1.15, 0.36, 1.5, 0)
-mesh = SubResource("SphereMesh_pauldron")
-
-[node name="ArmL" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.2, -0.02)
-mesh = SubResource("CapsuleMesh_arm")
-
-[node name="ArmR" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.2, -0.05)
-mesh = SubResource("CapsuleMesh_arm")
-
-[node name="Helmet" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.76, 0)
-mesh = SubResource("SphereMesh_helmet")
-
-[node name="Visor" type="MeshInstance3D" parent="Model"]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.78, -0.17)
-mesh = SubResource("BoxMesh_visor")
-
-[node name="Crest" type="MeshInstance3D" parent="Model"]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.97, 0.02)
-mesh = SubResource("BoxMesh_crest")
-
-[node name="Cape" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 0.985, 0.174, 0, -0.174, 0.985, 0, 1.0, 0.24)
-mesh = SubResource("BoxMesh_cape")
-
-[node name="SwordPivot" type="Node3D" parent="Model"]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.1, -0.25)
-
-[node name="SwordMesh" type="MeshInstance3D" parent="Model/SwordPivot"]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.65)
-mesh = SubResource("BoxMesh_sword")
-
-[node name="Guard" type="MeshInstance3D" parent="Model/SwordPivot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.13)
-mesh = SubResource("BoxMesh_guard")
-
-[node name="Grip" type="MeshInstance3D" parent="Model/SwordPivot"]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
-mesh = SubResource("CylinderMesh_grip")
+script = ExtResource("90_body")
+model_scene = ExtResource("91_xbot")
+library = ExtResource("92_anims")
+body_color = Color(0.3, 0.4, 0.55, 1)
 
 [node name="TargetMarker" type="MeshInstance3D" parent="."]
 top_level = true
@@ -243,7 +182,7 @@ script = ExtResource("4_health")
 [node name="InputBuffer" type="Node" parent="."]
 unique_name_in_owner = true
 script = ExtResource("7_buffer")
-actions = Array[StringName]([&"attack", &"parry", &"skill_1", &"skill_2", &"skill_3"])
+actions = Array[StringName]([&"attack", &"parry", &"dodge", &"skill_1", &"skill_2", &"skill_3"])
 
 [node name="Targeting" type="Node" parent="." node_paths=PackedStringArray("marker")]
 unique_name_in_owner = true
@@ -289,8 +228,11 @@ script = ExtResource("14_bolt")
 [node name="Dash" type="Node" parent="StateMachine"]
 script = ExtResource("15_dash")
 
-[node name="Travel" type="Node" parent="StateMachine"]
-script = ExtResource("16_travel")
-
 [node name="Power" type="Node" parent="StateMachine"]
 script = ExtResource("25_power_state")
+
+[node name="Dodge" type="Node" parent="StateMachine"]
+script = ExtResource("26_dodge")
+
+[node name="Block" type="Node" parent="StateMachine"]
+script = ExtResource("27_block")

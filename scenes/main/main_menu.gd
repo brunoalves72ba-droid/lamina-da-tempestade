@@ -31,7 +31,7 @@ func _ready() -> void:
 	column.add_child(MenuKit.label(SUBTITLE, 14, MenuKit.MUTED_COLOR))
 	_progress_label = MenuKit.label("", 18, MenuKit.GOLD_COLOR)
 	column.add_child(_progress_label)
-	_play_button = MenuKit.button("Jogar", func() -> void: Scenes.go(get_tree(), Scenes.ARENA))
+	_play_button = MenuKit.button("Jogar", func() -> void: Scenes.go(get_tree(), Scenes.TRAIL))
 	column.add_child(_play_button)
 	column.add_child(MenuKit.button("Ferreiro (loja)", _open_shop))
 	column.add_child(MenuKit.button("Sair", func() -> void: get_tree().quit()))
@@ -50,5 +50,5 @@ func _open_shop() -> void:
 func _refresh_progress() -> void:
 	var text := "Ouro: %d" % GameState.gold
 	if sword_upgrade != null and armor_upgrade != null:
-		text += "   ·   Espada nv %d   ·   Armadura nv %d" % [GameState.level_of(sword_upgrade), GameState.level_of(armor_upgrade)]
+		text += "   ·   Nível %d   ·   Espada nv %d   ·   Armadura nv %d" % [GameState.level, GameState.level_of(sword_upgrade), GameState.level_of(armor_upgrade)]
 	_progress_label.text = text

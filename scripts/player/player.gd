@@ -1,7 +1,9 @@
 class_name Player
 extends CharacterBody3D
-## Herói conjurador de raios: combo, parry, Dardo de Raio e Passo Relâmpago.
-## Nos trilhos, quem move o herói é o RailController (estado Travel).
+## Herói conjurador de raios: movimento livre em 3ª pessoa (relativo à câmera), combo, parry,
+## bloqueio, esquiva, Dardo de Raio, Passo Relâmpago e poderes.
+## Os estados pedem um movimento por frame (locomote/push); este script aplica aceleração,
+## gravidade e o giro do corpo.
 
 signal parry_succeeded(attacker: Node3D)
 signal hit_taken(info: DamageInfo, parry_was_early: bool)
@@ -10,23 +12,21 @@ signal dash_started(from: Vector3, to: Vector3)
 signal power_denied(slot: int)
 signal died
 
-const BODY_COLOR := Color(0.32, 0.42, 0.58)
 const PARRY_FLASH_COLOR := Color(0.55, 0.85, 1.0)
 const HURT_FLASH_COLOR := Color(1.0, 0.25, 0.2)
-const FLASH_TIME: float = 0.25
-const POSE_BLEND_TIME: float = 0.15
-const GUARD_BLEND_TIME: float = 0.05
+## Animações do combo (biblioteca da Mixamo), uma por golpe.
+const ATTACK_ANIMATIONS: Array[StringName] = [&"attack_1", &"attack_2", &"attack_3"]
+const POWER_ANIMATIONS: Dictionary = {
+	PowerData.Kind.VOLTAIC_BLADE: &"voltaic_blade",
+	PowerData.Kind.CHAIN_LIGHTNING: &"cast_chain",
+	PowerData.Kind.STORM_FURY: &"cast_storm",
+}
+const PARRY_ANIMATION_SPEED: float = 1.6
+const HURT_ANIMATION_SPEED: float = 1.2
+const DODGE_TURN_BACK_TIME: float = 0.15
 ## Altura de onde sai o Dardo e para onde ele mira no alvo.
 const BOLT_ORIGIN_HEIGHT: float = 1.3
 const TARGET_AIM_HEIGHT: float = 1.1
-## Poses da espada (rotação do pivô, em graus).
-const REST_POSE := Vector3(-20.0, -35.0, 0.0)
-const GUARD_POSE := Vector3(0.0, 90.0, 10.0)
-const WHIFF_POSE := Vector3(-45.0, 60.0, 0.0)
-const CAST_POSE := Vector3(60.0, -10.0, 0.0)
-const SWING_FROM: Array[Vector3] = [Vector3(0.0, 80.0, 0.0), Vector3(0.0, -80.0, 0.0), Vector3(80.0, 0.0, 0.0)]
-const SWING_TO: Array[Vector3] = [Vector3(0.0, -80.0, 0.0), Vector3(0.0, 80.0, 0.0), Vector3(-50.0, 0.0, 0.0)]
-const DEAD_TILT := Vector3(-80.0, 0.0, 0.0)
 ## Arcos elétricos em volta do herói quando a Carga está cheia.
 const AURA_INTERVAL: float = 0.12
 const AURA_RADIUS: float = 0.55
@@ -47,14 +47,19 @@ var element: Element.Type = Element.Type.NONE
 ## ATK e redução de dano atuais (base dos dados + upgrades da loja, GDD §10).
 var base_damage: float = 0.0
 var damage_reduction: float = 0.0
+## Rotação horizontal da câmera (rad). WASD é relativo a ela; a câmera escreve aqui todo frame.
+var view_yaw: float = 0.0
+## Testes e cenas automáticas podem dirigir o herói sem teclado.
+var use_scripted_input: bool = false
+var scripted_move_input: Vector2 = Vector2.ZERO
 
 var _clock: float = 0.0
+var _move_intent: Vector3 = Vector3.ZERO
+var _last_dodge_end_time: float = -INF
 var _aura_timer: float = 0.0
 var _last_hit_index: int = -1
 var _last_hit_end_time: float = -INF
-var _body_material: StandardMaterial3D
-var _pose_tween: Tween
-var _flash_tween: Tween
+var _dodge_turn_tween: Tween
 
 @onready var health: HealthComponent = %HealthComponent
 @onready var hurtbox: Hurtbox = %Hurtbox
@@ -65,26 +70,22 @@ var _flash_tween: Tween
 @onready var bolt_cooldown: Cooldown = %BoltCooldown
 @onready var charge: StaticCharge = %StaticCharge
 @onready var powers: PowerCaster = %PowerCaster
+@onready var body: AnimatedBody = %Body
 @onready var _model: Node3D = %Model
-@onready var _body_mesh: MeshInstance3D = %BodyMesh
-@onready var _sword_pivot: Node3D = %SwordPivot
-## Partes que brilham na cor do elemento: viseira, crista e lâmina.
-@onready var _glow_parts: Array[MeshInstance3D] = [%Visor, %Crest, %SwordMesh]
 
+## Material da lâmina: brilha na cor do elemento.
 var _glow_material: StandardMaterial3D
 
 
 func _ready() -> void:
 	assert(data != null and weapon != null, "Player precisa de PlayerData e WeaponData")
-	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = BODY_COLOR
-	_body_mesh.material_override = _body_material
 	_glow_material = StandardMaterial3D.new()
 	_glow_material.emission_enabled = true
-	for part: MeshInstance3D in _glow_parts:
-		part.material_override = _glow_material
+	_glow_material.metallic = 0.8
+	_glow_material.roughness = 0.25
 	_update_glow()
-	_sword_pivot.rotation_degrees = REST_POSE
+	body.attach(&"mixamorig_RightHand", Equipment.sword(_glow_material))
+	body.attach(&"mixamorig_LeftForeArm", Equipment.kite_shield(), Equipment.kite_shield_offset())
 	input_buffer.buffer_time = data.input_buffer_time
 	bolt_cooldown.duration = data.bolt_cooldown
 	charge.maximum = data.charge_max
@@ -98,12 +99,110 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_clock += delta
-	if health.is_dead:
+	if not health.is_dead:
+		_update_facing(delta)
+		if charge.is_full:
+			_update_charge_aura(delta)
+	_apply_motion(delta)
+	if not health.is_dead:
+		body.update_locomotion(global_basis.inverse() * velocity, targeting.locked, state_machine.is_in(&"Block"))
+
+
+# --- Movimento livre ----------------------------------------------------------
+
+## Entrada de movimento (x = lado, y = frente/trás; -y é para frente), de 0 a 1.
+func move_input() -> Vector2:
+	if use_scripted_input:
+		return scripted_move_input.limit_length(1.0)
+	return Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
+
+
+## Direção no mundo correspondente à entrada, relativa à câmera.
+func move_direction() -> Vector3:
+	var input := move_input()
+	return Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, view_yaw)
+
+
+func wants_to_sprint() -> bool:
+	return not use_scripted_input and Input.is_action_pressed(&"sprint") and not targeting.locked
+
+
+## Estados chamam todo frame: anda na direção da entrada com a velocidade dada.
+func locomote(speed: float) -> void:
+	_move_intent = move_direction() * speed
+
+
+## Estados chamam todo frame: movimento horizontal forçado (avanço do golpe, esquiva, empurrão).
+func push(horizontal_velocity: Vector3) -> void:
+	horizontal_velocity.y = 0.0
+	_move_intent = horizontal_velocity
+
+
+func horizontal_speed() -> float:
+	return Vector2(velocity.x, velocity.z).length()
+
+
+func forward() -> Vector3:
+	var f := -global_basis.z
+	f.y = 0.0
+	return f.normalized()
+
+
+## Botão de defesa segurado (parry que vira bloqueio). Testes usam scripted_defend_held.
+var scripted_defend_held: bool = false
+
+
+func is_defend_held() -> bool:
+	if use_scripted_input:
+		return scripted_defend_held
+	return Input.is_action_pressed(&"parry")
+
+
+func can_dodge() -> bool:
+	return _clock - _last_dodge_end_time >= data.dodge_cooldown
+
+
+func mark_dodge_finished() -> void:
+	_last_dodge_end_time = _clock
+
+
+func _apply_motion(delta: float) -> void:
+	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	var accelerating := _move_intent.length() > horizontal.length()
+	var rate := data.acceleration if accelerating else data.deceleration
+	# Movimentos forçados (esquiva, empurrão) respondem na hora.
+	if not _move_intent.is_zero_approx() and not state_machine.is_in(&"Idle") and not state_machine.is_in(&"Block"):
+		rate = INF
+	horizontal = horizontal.move_toward(_move_intent, rate * delta) if rate != INF else _move_intent
+	velocity.x = horizontal.x
+	velocity.z = horizontal.z
+	if is_on_floor():
+		velocity.y = -0.5
+	else:
+		velocity.y -= data.gravity * delta
+	move_and_slide()
+	_move_intent = Vector3.ZERO
+
+
+## Para onde o corpo olha: alvo travado > alvo próximo durante ações de combate > direção do movimento.
+func _update_facing(delta: float) -> void:
+	var combat_action := not (state_machine.is_in(&"Idle") or state_machine.is_in(&"Dodge"))
+	var face_target := target != null and (targeting.locked or (combat_action and is_target_in_soft_range()))
+	var desired := Vector3.ZERO
+	if face_target:
+		desired = target.global_position - global_position
+	elif not _move_intent.is_zero_approx() and not state_machine.is_in(&"Attack"):
+		desired = _move_intent
+	desired.y = 0.0
+	if desired.length_squared() < 0.0001:
 		return
-	if not is_traveling():
-		_face_target()
-	if charge.is_full:
-		_update_charge_aura(delta)
+	var target_yaw := atan2(-desired.x, -desired.z)
+	var step := INF if combat_action and face_target else data.turn_speed * delta
+	rotation.y = target_yaw if step == INF else rotate_toward(rotation.y, target_yaw, step)
+
+
+func is_target_in_soft_range() -> bool:
+	return distance_to_target() <= data.soft_aim_range
 
 
 func reset_state() -> void:
@@ -116,6 +215,8 @@ func reset_state() -> void:
 	_last_hit_index = -1
 	_last_hit_end_time = -INF
 	_model.rotation_degrees = Vector3.ZERO
+	body.rotation = Vector3.ZERO
+	body.stop_action()
 	state_machine.transition_to(&"Idle")
 
 
@@ -137,29 +238,13 @@ func set_element(new_element: Element.Type) -> void:
 
 func _update_glow() -> void:
 	var color := lightning_color()
-	_glow_material.albedo_color = color
+	_glow_material.albedo_color = color.lerp(Color(0.85, 0.88, 0.95), 0.5)
 	_glow_material.emission = color
 	_glow_material.emission_energy_multiplier = GLOW_ENERGY
 
 
 func lightning_color() -> Color:
 	return Element.color(element)
-
-
-# --- Trilho -----------------------------------------------------------------
-
-func begin_travel() -> void:
-	if not health.is_dead:
-		state_machine.transition_to(&"Travel")
-
-
-func end_travel() -> void:
-	if is_traveling():
-		state_machine.transition_to(&"Idle")
-
-
-func is_traveling() -> bool:
-	return state_machine.is_in(&"Travel")
 
 
 func face_direction(direction: Vector3) -> void:
@@ -244,9 +329,12 @@ func is_target_in_melee_range() -> bool:
 	return distance_to_target() <= data.melee_range
 
 
-## Estado de ataque a usar a partir do Idle, conforme a distância do alvo.
+## Estado de ataque a usar a partir do Idle. Dardo/Passo Relâmpago só com alvo travado e distante
+## (até o alcance do Passo); sem travar, o golpe sai onde o herói está.
 func choose_attack_state() -> StringName:
-	if target == null or is_target_in_melee_range():
+	if target == null or is_target_in_melee_range() or not targeting.locked:
+		return &"Attack"
+	if distance_to_target() > data.dash_max_distance + data.dash_stop_distance:
 		return &"Attack"
 	return &"Bolt" if bolt_cooldown.is_ready else &"Dash"
 
@@ -308,6 +396,29 @@ func _on_hit_received(info: DamageInfo) -> void:
 	_take_hit(info)
 
 
+## Golpe recebido com o escudo erguido (estado Block): dano reduzido, sem cambalear.
+func take_blocked_hit(info: DamageInfo) -> void:
+	info.amount *= (1.0 - data.block_reduction) * (1.0 - damage_reduction)
+	health.take_damage(info.amount)
+	Events.damage_taken.emit(self, info)
+	SfxLibrary.play(self, &"hit")
+	flash(PARRY_FLASH_COLOR)
+	body.play_action(&"block_hit")
+	if health.is_dead:
+		state_machine.transition_to(&"Dead")
+		died.emit()
+		Events.entity_died.emit(self)
+
+
+## Direção do empurrão ao tomar um golpe: para longe de quem bateu.
+func knockback_direction(info: DamageInfo) -> Vector3:
+	if info.source == null or not is_instance_valid(info.source):
+		return -forward()
+	var away := global_position - info.source.global_position
+	away.y = 0.0
+	return away.normalized() if away.length_squared() > 0.0001 else -forward()
+
+
 func _take_hit(info: DamageInfo) -> void:
 	# Ainda em Parry aqui = janela já fechou, está na recuperação (parry cedo).
 	var parry_was_early := state_machine.is_in(&"Parry")
@@ -323,59 +434,66 @@ func _take_hit(info: DamageInfo) -> void:
 		died.emit()
 		Events.entity_died.emit(self)
 	else:
-		state_machine.transition_to(&"Hurt")
+		state_machine.transition_to(&"Hurt", {"knockback": knockback_direction(info)})
 
 
-# --- Visual (placeholder) ---------------------------------------------------
+# --- Visual (animações da Mixamo) -------------------------------------------
 
+## Golpe do combo: o impacto da animação coincide com o fim da preparação + meio da fase ativa.
 func begin_swing(hit_index: int) -> void:
-	var pose_index := hit_index % SWING_FROM.size()
-	_sword_pivot.rotation_degrees = SWING_FROM[pose_index]
-	_tween_pose(SWING_TO[pose_index], weapon.hit_windup + weapon.hit_active)
+	var anim := ATTACK_ANIMATIONS[hit_index % ATTACK_ANIMATIONS.size()]
+	body.play_action_hit_at(anim, weapon.hit_windup + weapon.hit_active * 0.5)
 	SfxLibrary.play(self, &"swing")
 
 
 func set_pose_rest() -> void:
-	_tween_pose(REST_POSE, POSE_BLEND_TIME)
+	body.stop_action()
 
 
 func set_pose_guard() -> void:
-	_tween_pose(GUARD_POSE, GUARD_BLEND_TIME)
+	body.play_action(&"parry", PARRY_ANIMATION_SPEED)
 
 
+## Dardo de Raio: lança na hora (a animação começa no instante do lançamento).
 func set_pose_cast() -> void:
-	_tween_pose(CAST_POSE, GUARD_BLEND_TIME)
+	body.play_action_hit_at(&"cast_bolt", data.bolt_cast_time)
+
+
+func play_power_cast(power: PowerData) -> void:
+	body.play_action_hit_at(POWER_ANIMATIONS.get(power.kind, &"cast_chain"), power.cast_time)
 
 
 func set_pose_whiff() -> void:
-	_tween_pose(WHIFF_POSE, POSE_BLEND_TIME)
+	body.stop_action()
 	SfxLibrary.play(self, &"whiff")
 
 
+func play_hurt() -> void:
+	body.play_action(&"hurt", HURT_ANIMATION_SPEED)
+
+
+## Esquiva: vira o corpo para a direção da esquiva e toca o salto rasante.
+func play_dodge(direction: Vector3, duration: float) -> void:
+	var local_direction := global_basis.inverse() * direction
+	if _dodge_turn_tween != null:
+		_dodge_turn_tween.kill()
+	body.rotation.y = atan2(-local_direction.x, -local_direction.z)
+	body.play_action_for(&"dodge", duration)
+	SfxLibrary.play(self, &"whiff")
+
+
+func end_dodge() -> void:
+	body.stop_action()
+	_dodge_turn_tween = create_tween()
+	_dodge_turn_tween.tween_property(body, "rotation:y", 0.0, DODGE_TURN_BACK_TIME)
+
+
 func play_death() -> void:
-	var tween := create_tween()
-	tween.tween_property(_model, "rotation_degrees", DEAD_TILT, POSE_BLEND_TIME * 3.0)
+	body.play_action(&"death", 1.0, 0.0, true)
 
 
 func flash(color: Color) -> void:
-	if _flash_tween != null:
-		_flash_tween.kill()
-	_body_material.albedo_color = color
-	_flash_tween = create_tween()
-	_flash_tween.tween_property(_body_material, "albedo_color", BODY_COLOR, FLASH_TIME)
-
-
-func _tween_pose(pose: Vector3, duration: float) -> void:
-	if _pose_tween != null:
-		_pose_tween.kill()
-	_pose_tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	_pose_tween.tween_property(_sword_pivot, "rotation_degrees", pose, duration)
-
-
-func _face_target() -> void:
-	if target == null:
-		return
-	face_direction(target.global_position - global_position)
+	body.flash(color)
 
 
 func _on_hitbox_hit_landed(_hurtbox: Hurtbox, info: DamageInfo) -> void:

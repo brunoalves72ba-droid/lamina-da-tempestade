@@ -1,0 +1,449 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/world_level.gd" id="1_r"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_r"]
+[ext_resource type="PackedScene" path="res://scenes/camera/third_person_camera.tscn" id="3_r"]
+[ext_resource type="Script" path="res://scripts/world/wave_spawner.gd" id="4_r"]
+[ext_resource type="Script" path="res://scripts/enemies/attack_token_manager.gd" id="5_r"]
+[ext_resource type="Resource" path="res://data/combat/attack_tokens.tres" id="6_r"]
+[ext_resource type="Script" path="res://scripts/combat/game_feel.gd" id="7_r"]
+[ext_resource type="Resource" path="res://data/combat/game_feel.tres" id="8_r"]
+[ext_resource type="Script" path="res://scripts/combat/damage_number_spawner.gd" id="9_r"]
+[ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="10_r"]
+[ext_resource type="Script" path="res://scripts/world/trail_terrain.gd" id="11_r"]
+[ext_resource type="Shader" path="res://shaders/terrain.gdshader" id="12_r"]
+[ext_resource type="Script" path="res://scripts/world/prop_scatter.gd" id="13_r"]
+[ext_resource type="Script" path="res://scripts/resources/prop_entry.gd" id="14_r"]
+[ext_resource type="Script" path="res://scripts/world/combat_zone.gd" id="15_r"]
+[ext_resource type="Script" path="res://scripts/resources/wave_data.gd" id="16_r"]
+[ext_resource type="Script" path="res://scripts/world/checkpoint.gd" id="17_r"]
+[ext_resource type="Script" path="res://scripts/vfx/storm_sky.gd" id="18_r"]
+[ext_resource type="PackedScene" path="res://ui/menus/element_select.tscn" id="19_r"]
+[ext_resource type="PackedScene" path="res://ui/menus/result_screen.tscn" id="20_r"]
+[ext_resource type="PackedScene" path="res://ui/menus/pause_menu.tscn" id="21_r"]
+[ext_resource type="Resource" path="res://data/combat/rewards.tres" id="22_r"]
+[ext_resource type="Resource" path="res://data/upgrades/sword.tres" id="23_r"]
+[ext_resource type="Resource" path="res://data/upgrades/armor.tres" id="24_r"]
+[ext_resource type="Script" path="res://scripts/resources/spawn_entry.gd" id="25_r"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_base.tscn" id="26_r"]
+[ext_resource type="Resource" path="res://data/enemies/soldier.tres" id="27_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/hdri/kloppenheim_02_puresky/kloppenheim_02_puresky_2k.hdr" id="28_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/stone_fire_pit/stone_fire_pit_1k.gltf" id="29_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/gothic_statue/gothic_statue_1k.gltf" id="30_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/forrest_ground_01/forrest_ground_01_diff_2k.jpg" id="31_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/forrest_ground_01/forrest_ground_01_nor_gl_2k.jpg" id="32_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/forrest_ground_01/forrest_ground_01_rough_2k.jpg" id="33_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/brown_mud_leaves_01/brown_mud_leaves_01_diff_2k.jpg" id="34_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/brown_mud_leaves_01/brown_mud_leaves_01_nor_gl_2k.jpg" id="35_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/brown_mud_leaves_01/brown_mud_leaves_01_rough_2k.jpg" id="36_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/rock_wall_08/rock_wall_08_diff_2k.jpg" id="37_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/rock_wall_08/rock_wall_08_nor_gl_2k.jpg" id="38_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/rock_wall_08/rock_wall_08_rough_2k.jpg" id="39_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/castle_brick_07/castle_brick_07_diff_2k.jpg" id="40_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/castle_brick_07/castle_brick_07_nor_gl_2k.jpg" id="41_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/castle_brick_07/castle_brick_07_rough_2k.jpg" id="42_r"]
+[ext_resource type="Texture2D" path="res://assets/environment/textures/castle_brick_07/castle_brick_07_ao_2k.jpg" id="43_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/dead_tree_trunk/dead_tree_trunk_1k.gltf" id="44_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/dead_quiver_trunk/dead_quiver_trunk_1k.gltf" id="45_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/tree_stump_01/tree_stump_01_1k.gltf" id="46_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/rock_07/rock_07_1k.gltf" id="47_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/rock_09/rock_09_1k.gltf" id="48_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/rock_moss_set_01/rock_moss_set_01_1k.gltf" id="49_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/stone_01/stone_01_1k.gltf" id="50_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/rock_face_01/rock_face_01_1k.gltf" id="51_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/rock_face_02/rock_face_02_1k.gltf" id="52_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/fern_02/fern_02_1k.gltf" id="53_r"]
+[ext_resource type="PackedScene" path="res://assets/environment/models/kite_shield/kite_shield_1k.gltf" id="54_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z1.tres" id="55_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z2.tres" id="56_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z3a.tres" id="57_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z3b.tres" id="58_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z4.tres" id="59_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z5a.tres" id="60_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z5b.tres" id="61_r"]
+
+[sub_resource type="PanoramaSkyMaterial" id="Sky_mat"]
+panorama = ExtResource("28_r")
+energy_multiplier = 0.45
+
+[sub_resource type="Sky" id="Sky_res"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky_res")
+ambient_light_source = 3
+ambient_light_energy = 0.7
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 1.05
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_radius = 1.4
+ssao_intensity = 1.8
+glow_enabled = true
+glow_intensity = 0.6
+glow_bloom = 0.04
+fog_enabled = false
+fog_light_color = Color(0.12, 0.14, 0.2, 1)
+fog_density = 0.014
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.022
+volumetric_fog_albedo = Color(0.55, 0.6, 0.75, 1)
+volumetric_fog_emission = Color(0.012, 0.015, 0.025, 1)
+volumetric_fog_length = 90.0
+volumetric_fog_ambient_inject = 0.4
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 0.88
+
+[sub_resource type="ShaderMaterial" id="TerrainMat"]
+shader = ExtResource("12_r")
+shader_parameter/ground_albedo = ExtResource("31_r")
+shader_parameter/ground_normal = ExtResource("32_r")
+shader_parameter/ground_rough = ExtResource("33_r")
+shader_parameter/mud_albedo = ExtResource("34_r")
+shader_parameter/mud_normal = ExtResource("35_r")
+shader_parameter/mud_rough = ExtResource("36_r")
+shader_parameter/rock_albedo = ExtResource("37_r")
+shader_parameter/rock_normal = ExtResource("38_r")
+shader_parameter/rock_rough = ExtResource("39_r")
+
+[sub_resource type="StandardMaterial3D" id="BrickMat"]
+albedo_texture = ExtResource("40_r")
+normal_enabled = true
+normal_texture = ExtResource("41_r")
+roughness_texture = ExtResource("42_r")
+ao_enabled = true
+ao_texture = ExtResource("43_r")
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+uv1_triplanar = true
+
+[sub_resource type="BoxMesh" id="WallMesh"]
+material = SubResource("BrickMat")
+size = Vector3(5, 3.2, 0.9)
+
+[sub_resource type="BoxMesh" id="LowWallMesh"]
+material = SubResource("BrickMat")
+size = Vector3(3, 1.4, 0.9)
+
+[sub_resource type="BoxMesh" id="PlinthMesh"]
+material = SubResource("BrickMat")
+size = Vector3(2.2, 0.8, 2.2)
+
+[sub_resource type="BoxShape3D" id="WallShape"]
+size = Vector3(5, 3.2, 0.9)
+
+[sub_resource type="BoxShape3D" id="LowWallShape"]
+size = Vector3(3, 1.4, 0.9)
+
+[sub_resource type="Resource" id="Prop_0"]
+script = ExtResource("14_r")
+scene = ExtResource("44_r")
+weight = 1.2
+scale_min = 0.9
+scale_max = 1.3
+side_distance_min = 7.0
+side_distance_max = 14.0
+collision_radius = 0.5
+sink = 0.15
+
+[sub_resource type="Resource" id="Prop_1"]
+script = ExtResource("14_r")
+scene = ExtResource("45_r")
+weight = 1.0
+scale_min = 1.0
+scale_max = 1.6
+side_distance_min = 6.0
+side_distance_max = 13.0
+collision_radius = 0.4
+sink = 0.1
+
+[sub_resource type="Resource" id="Prop_2"]
+script = ExtResource("14_r")
+scene = ExtResource("46_r")
+weight = 1.0
+scale_min = 0.8
+scale_max = 1.2
+side_distance_min = 5.0
+side_distance_max = 10.0
+collision_radius = 0.45
+sink = 0.1
+
+[sub_resource type="Resource" id="Prop_3"]
+script = ExtResource("14_r")
+scene = ExtResource("47_r")
+weight = 1.2
+scale_min = 1.0
+scale_max = 2.0
+side_distance_min = 6.0
+side_distance_max = 14.0
+collision_radius = 0.8
+sink = 0.2
+
+[sub_resource type="Resource" id="Prop_4"]
+script = ExtResource("14_r")
+scene = ExtResource("48_r")
+weight = 1.0
+scale_min = 1.0
+scale_max = 2.0
+side_distance_min = 6.0
+side_distance_max = 14.0
+collision_radius = 0.8
+sink = 0.2
+
+[sub_resource type="Resource" id="Prop_5"]
+script = ExtResource("14_r")
+scene = ExtResource("49_r")
+weight = 0.8
+scale_min = 0.8
+scale_max = 1.3
+side_distance_min = 5.0
+side_distance_max = 11.0
+collision_radius = 0.9
+sink = 0.1
+
+[sub_resource type="Resource" id="Prop_6"]
+script = ExtResource("14_r")
+scene = ExtResource("50_r")
+weight = 0.8
+scale_min = 0.8
+scale_max = 1.5
+side_distance_min = 5.0
+side_distance_max = 11.0
+collision_radius = 0.5
+sink = 0.1
+
+[sub_resource type="Resource" id="Prop_7"]
+script = ExtResource("14_r")
+scene = ExtResource("51_r")
+weight = 0.7
+scale_min = 2.0
+scale_max = 3.5
+side_distance_min = 12.0
+side_distance_max = 18.0
+collision_radius = 0.0
+sink = 0.6
+
+[sub_resource type="Resource" id="Prop_8"]
+script = ExtResource("14_r")
+scene = ExtResource("52_r")
+weight = 0.7
+scale_min = 2.0
+scale_max = 3.5
+side_distance_min = 12.0
+side_distance_max = 18.0
+collision_radius = 0.0
+sink = 0.6
+
+[sub_resource type="Resource" id="Prop_9"]
+script = ExtResource("14_r")
+scene = ExtResource("53_r")
+weight = 2.0
+scale_min = 0.8
+scale_max = 1.4
+side_distance_min = 4.5
+side_distance_max = 9.0
+collision_radius = 0.0
+sink = 0.05
+
+[sub_resource type="Resource" id="Prop_10"]
+script = ExtResource("14_r")
+scene = ExtResource("54_r")
+weight = 0.2
+scale_min = 1.0
+scale_max = 1.0
+side_distance_min = 4.0
+side_distance_max = 6.0
+collision_radius = 0.0
+sink = 0.0
+
+[sub_resource type="Resource" id="PatrolEntry"]
+script = ExtResource("25_r")
+enemy_scene = ExtResource("26_r")
+enemy_data = ExtResource("27_r")
+element = 2
+spawn_point = 0
+
+[node name="TrailWorld" type="Node3D"]
+script = ExtResource("1_r")
+waypoints = PackedVector3Array(0, 0, 0, 0, 0, -30, 14, 0, -55, 16, 0, -85, 0, 0, -115, -6, 0, -145, 8, 0, -175, 14, 0, -205, 8, 0, -238)
+element_select_scene = ExtResource("19_r")
+result_scene = ExtResource("20_r")
+pause_scene = ExtResource("21_r")
+rewards = ExtResource("22_r")
+sword_upgrade = ExtResource("23_r")
+armor_upgrade = ExtResource("24_r")
+patrol_entry = SubResource("PatrolEntry")
+patrol_progress = Array[float]([16.0, 64.0, 112.0, 160.0, 205.0])
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+unique_name_in_owner = true
+environment = SubResource("Env")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819152, -0.469846, 0.329877, 0, 0.574658, 0.818393, -0.573576, -0.67101, 0.471113, 0, 30, 0)
+light_color = Color(0.6, 0.68, 0.92, 1)
+light_energy = 0.9
+light_angular_distance = 0.6
+shadow_enabled = true
+directional_shadow_max_distance = 70.0
+
+[node name="StormSky" type="DirectionalLight3D" parent="." node_paths=PackedStringArray("player")]
+transform = Transform3D(1, 0, 0, 0, 0.258819, 0.965926, 0, -0.965926, 0.258819, 0, 30, 0)
+light_color = Color(0.72, 0.8, 1, 1)
+light_energy = 0.0
+script = ExtResource("18_r")
+player = NodePath("../Player")
+
+[node name="Route" type="Path3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Terrain" type="Node3D" parent="." node_paths=PackedStringArray("route")]
+unique_name_in_owner = true
+script = ExtResource("11_r")
+route = NodePath("../Route")
+terrain_material = SubResource("TerrainMat")
+
+[node name="Props" type="Node3D" parent="." node_paths=PackedStringArray("terrain")]
+unique_name_in_owner = true
+script = ExtResource("13_r")
+terrain = NodePath("../Terrain")
+props = Array[ExtResource("14_r")]([SubResource("Prop_0"), SubResource("Prop_1"), SubResource("Prop_2"), SubResource("Prop_3"), SubResource("Prop_4"), SubResource("Prop_5"), SubResource("Prop_6"), SubResource("Prop_7"), SubResource("Prop_8"), SubResource("Prop_9"), SubResource("Prop_10")])
+
+[node name="Zones" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Zone1" type="Node3D" parent="Zones"]
+script = ExtResource("15_r")
+waves = Array[ExtResource("16_r")]([ExtResource("55_r")])
+display_name = "Clareira dos Corvos"
+route_progress = 34.0
+
+[node name="Zone2" type="Node3D" parent="Zones"]
+script = ExtResource("15_r")
+waves = Array[ExtResource("16_r")]([ExtResource("56_r")])
+display_name = "Vale das Cinzas"
+route_progress = 82.0
+
+[node name="Zone3" type="Node3D" parent="Zones"]
+script = ExtResource("15_r")
+waves = Array[ExtResource("16_r")]([ExtResource("57_r"), ExtResource("58_r")])
+display_name = "Ponte de Pedra"
+route_progress = 130.0
+
+[node name="Zone4" type="Node3D" parent="Zones"]
+script = ExtResource("15_r")
+waves = Array[ExtResource("16_r")]([ExtResource("59_r")])
+display_name = "Bosque Morto"
+route_progress = 178.0
+
+[node name="Zone5" type="Node3D" parent="Zones"]
+script = ExtResource("15_r")
+waves = Array[ExtResource("16_r")]([ExtResource("60_r"), ExtResource("61_r")])
+display_name = "Portão do Santuário"
+route_progress = 222.0
+
+[node name="Checkpoints" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Checkpoint1" type="Node3D" parent="Checkpoints"]
+script = ExtResource("17_r")
+fire_pit_scene = ExtResource("29_r")
+route_progress = 57.0
+
+[node name="Checkpoint2" type="Node3D" parent="Checkpoints"]
+script = ExtResource("17_r")
+fire_pit_scene = ExtResource("29_r")
+route_progress = 105.0
+
+[node name="Checkpoint3" type="Node3D" parent="Checkpoints"]
+script = ExtResource("17_r")
+fire_pit_scene = ExtResource("29_r")
+route_progress = 153.0
+
+[node name="Checkpoint4" type="Node3D" parent="Checkpoints"]
+script = ExtResource("17_r")
+fire_pit_scene = ExtResource("29_r")
+route_progress = 200.0
+
+[node name="Shrine" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Plinth" type="MeshInstance3D" parent="Shrine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, -2)
+mesh = SubResource("PlinthMesh")
+
+[node name="Statue" parent="Shrine" instance=ExtResource("30_r")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0.8, -2)
+
+[node name="Wall1" type="StaticBody3D" parent="Shrine"]
+transform = Transform3D(0.9553, 0, 0.2955, 0, 1, 0, -0.2955, 0, 0.9553, -4.5, 1.6, -3.5)
+
+[node name="Mesh" type="MeshInstance3D" parent="Shrine/Wall1"]
+mesh = SubResource("WallMesh")
+
+[node name="Shape" type="CollisionShape3D" parent="Shrine/Wall1"]
+shape = SubResource("WallShape")
+
+[node name="Wall2" type="StaticBody3D" parent="Shrine"]
+transform = Transform3D(0.9689, 0, -0.2474, 0, 1, 0, 0.2474, 0, 0.9689, 4.5, 1.6, -3.0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Shrine/Wall2"]
+mesh = SubResource("WallMesh")
+
+[node name="Shape" type="CollisionShape3D" parent="Shrine/Wall2"]
+shape = SubResource("WallShape")
+
+[node name="LowWall" type="StaticBody3D" parent="Shrine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.7, 2.5)
+
+[node name="Mesh" type="MeshInstance3D" parent="Shrine/LowWall"]
+mesh = SubResource("LowWallMesh")
+
+[node name="Shape" type="CollisionShape3D" parent="Shrine/LowWall"]
+shape = SubResource("LowWallShape")
+
+[node name="Glow" type="OmniLight3D" parent="Shrine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -1)
+light_color = Color(0.55, 0.75, 1, 1)
+light_energy = 2.5
+omni_range = 12.0
+shadow_enabled = true
+
+[node name="Label" type="Label3D" parent="Shrine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.2, -2)
+billboard = 1
+modulate = Color(0.75, 0.88, 1, 1)
+text = "Santuário"
+font_size = 96
+outline_size = 18
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("2_r")]
+unique_name_in_owner = true
+
+[node name="Camera" parent="." node_paths=PackedStringArray("player") instance=ExtResource("3_r")]
+unique_name_in_owner = true
+player = NodePath("../Player")
+
+[node name="AttackTokenManager" type="Node" parent="."]
+script = ExtResource("5_r")
+data = ExtResource("6_r")
+
+[node name="WaveSpawner" type="Node" parent="." node_paths=PackedStringArray("enemies_root", "token_manager")]
+unique_name_in_owner = true
+script = ExtResource("4_r")
+enemies_root = NodePath("../Enemies")
+token_manager = NodePath("../AttackTokenManager")
+
+[node name="GameFeel" type="Node" parent="."]
+script = ExtResource("7_r")
+data = ExtResource("8_r")
+
+[node name="DamageNumbers" type="Node3D" parent="."]
+script = ExtResource("9_r")
+
+[node name="HUD" parent="." instance=ExtResource("10_r")]
+unique_name_in_owner = true

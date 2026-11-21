@@ -16,7 +16,7 @@ const PARRY_LEAD_TIME: float = 0.12
 const EARLY_PRESS_DELAY: float = 0.2
 const SETTLE_TIME: float = 0.1
 const COMBO_PRESS_INTERVAL: float = 0.25
-const TIMEOUT_SECONDS: float = 120.0
+const TIMEOUT_SECONDS: float = 300.0
 
 var _sandbox: SandboxCombat
 var _player: Player
@@ -52,6 +52,7 @@ func _ready() -> void:
 	await _test_chain_lightning()
 	await _test_storm_fury()
 	await _test_elite_double_strike()
+	await _test_free_movement()
 	await _test_combo_and_kill()
 
 	print("\n%s — %d falha(s)" % ["COMBATE OK" if _failures == 0 else "COMBATE FALHOU", _failures])
@@ -266,6 +267,8 @@ func _test_storm_fury() -> void:
 	await _wait(fury.cast_time + SETTLE_TIME)
 	_check(is_equal_approx(_enemy.health.current_health, _enemy.health.max_health), "sem Carga cheia, não é lançada")
 	_player.charge.add(_player.data.charge_max)
+	# Os inimigos circulam o herói; põe o vizinho colado no alvo logo antes de lançar.
+	neighbor.global_position = _enemy.global_position + _enemy.global_basis.x * 1.3
 	var neighbor_distance := neighbor.global_position.distance_to(_enemy.global_position)
 	_player.input_buffer.press(&"skill_3")
 	await _wait(fury.cast_time + SETTLE_TIME)
@@ -299,6 +302,49 @@ func _test_elite_double_strike() -> void:
 			"2º golpe aparado não causa dano (vida %.0f → %.0f)" % [hp_after_first, _player.health.current_health])
 	_check(elite.is_stunned(), "aparar o 2º golpe atordoa a Elite")
 	elite.auto_attack = false
+
+func _test_free_movement() -> void:
+	print("\n[Movimento livre: andar, esquiva e bloqueio]")
+	_sandbox.reset()
+	_enemy.auto_attack = false
+	await _wait(SETTLE_TIME)
+	_player.use_scripted_input = true
+	var start := _player.global_position
+	_player.scripted_move_input = Vector2(1.0, 0.0)
+	await _wait(0.6)
+	_player.scripted_move_input = Vector2.ZERO
+	var moved := _player.global_position.x - start.x
+	_check(moved > 1.5, "anda para o lado com a entrada (andou %.1f m em 0,6 s)" % moved)
+	await _wait(0.3)
+	_check(_player.horizontal_speed() < 0.2, "para de andar ao soltar (desaceleração)")
+
+	_sandbox.reset()
+	_enemy.auto_attack = true
+	var time_to_impact: float = await _enemy.attack_telegraphed
+	await _wait(time_to_impact - 0.1)
+	var before_dodge := _player.global_position
+	_player.input_buffer.press(&"dodge")
+	await _wait(0.1 + SETTLE_TIME + 0.3)
+	_check(is_equal_approx(_player.health.current_health, _player.health.max_health), "esquiva no impacto: invencível, sem dano")
+	_check(_player.global_position.distance_to(before_dodge) > _player.data.dodge_distance * 0.7,
+			"esquiva desloca ~%.0f m" % _player.data.dodge_distance)
+
+	_sandbox.reset()
+	_enemy.auto_attack = true
+	_player.scripted_defend_held = true
+	time_to_impact = await _enemy.attack_telegraphed
+	await _wait(time_to_impact - 0.6)
+	_player.input_buffer.press(&"parry")
+	await _wait(0.6 + SETTLE_TIME)
+	var blocked := _player.health.max_health - _player.health.current_health
+	var expected_block := _enemy.data.attack_damage * (1.0 - _player.data.block_reduction)
+	_check(_player.state_machine.is_in(&"Block"), "segurando a defesa após a janela vira Bloqueio")
+	_check(is_equal_approx(blocked, expected_block), "bloqueio reduz o dano para %.1f (recebeu %.1f)" % [expected_block, blocked])
+	_player.scripted_defend_held = false
+	_player.use_scripted_input = false
+	_enemy.auto_attack = false
+	await _wait(SETTLE_TIME)
+
 
 func _test_combo_and_kill() -> void:
 	print("\n[Combo de 3 golpes]")

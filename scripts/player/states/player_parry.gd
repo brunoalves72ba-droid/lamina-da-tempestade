@@ -1,6 +1,7 @@
 extends PlayerState
 ## Parry (GDD §6.2): janela ativa curta; se um golpe chegar nela, vira Descarga.
-## Se a janela fechar sem golpe, o herói fica em recuperação sem poder defender (anti-spam).
+## Se a janela fechar com o botão ainda segurado, vira Bloqueio. Se fechar com o botão solto,
+## o herói fica em recuperação sem poder defender (anti-spam).
 
 enum Phase { ACTIVE, RECOVERY }
 
@@ -20,6 +21,9 @@ func physics_update(delta: float) -> void:
 	if _timer > 0.0:
 		return
 	if _phase == Phase.ACTIVE:
+		if player.is_defend_held():
+			machine.transition_to(&"Block")
+			return
 		_phase = Phase.RECOVERY
 		_timer = player.data.parry_recovery
 		player.set_pose_whiff()

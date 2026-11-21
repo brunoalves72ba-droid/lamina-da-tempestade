@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/camera/third_person_camera.gd" id="1_camera"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_arm"]
+radius = 0.25
+
+[node name="ThirdPersonCamera" type="Node3D"]
+script = ExtResource("1_camera")
+
+[node name="PitchPivot" type="Node3D" parent="."]
+
+[node name="SpringArm" type="SpringArm3D" parent="PitchPivot"]
+shape = SubResource("SphereShape3D_arm")
+spring_length = 3.6
+margin = 0.15
+
+[node name="Camera" type="Camera3D" parent="PitchPivot/SpringArm"]
+current = true
+fov = 65.0
+far = 300.0

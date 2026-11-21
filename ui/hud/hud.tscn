@@ -19,6 +19,9 @@ bg_color = Color(0.55, 0.12, 0.38, 1)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_charge_fill"]
 bg_color = Color(0.45, 0.78, 1, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xp_fill"]
+bg_color = Color(0.55, 0.85, 0.4, 1)
+
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
@@ -36,7 +39,7 @@ layout_mode = 0
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 344.0
-offset_bottom = 160.0
+offset_bottom = 200.0
 mouse_filter = 2
 
 [node name="PlayerTitle" type="Label" parent="Root/PlayerPanel"]
@@ -72,6 +75,21 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Carga Estática 0 / 100"
+
+[node name="XpBar" type="ProgressBar" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_xp_fill")
+show_percentage = false
+
+[node name="LevelLabel" type="Label" parent="Root/PlayerPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = ""
 
 [node name="ElementLabel" type="Label" parent="Root/PlayerPanel"]
 unique_name_in_owner = true
@@ -127,7 +145,7 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -260.0
+offset_left = -560.0
 offset_top = 24.0
 offset_right = -24.0
 offset_bottom = 50.0
@@ -210,5 +228,5 @@ offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.75, 0.75, 0.8, 1)
-text = "LMB / J: atacar   ·   RMB / K: parry (quando o anel fechar)   ·   A / D ou roda: alvo   ·   1 / 2 / 3: poderes   ·   Esc: pausa"
+text = "WASD: andar · Mouse: câmera · Shift: correr · Espaço: esquivar · Q: travar alvo · LMB: atacar · RMB: parry/bloquear · 1/2/3: poderes · Esc: pausa"
 horizontal_alignment = 1
