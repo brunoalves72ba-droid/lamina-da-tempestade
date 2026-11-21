@@ -51,6 +51,12 @@ func try_activate(hero_position: Vector3, hero_progress: float = -INF) -> bool:
 	return true
 
 
+## Já acesa num save anterior (Continuar): acende sem avisar ninguém.
+func restore_lit() -> void:
+	is_lit = true
+	_light.shadow_enabled = true
+
+
 func _process(delta: float) -> void:
 	if _light == null or not is_lit:
 		return

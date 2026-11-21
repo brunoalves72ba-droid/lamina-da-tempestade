@@ -60,6 +60,12 @@ func finish() -> void:
 
 
 ## Volta ao estado inicial (herói morreu dentro da zona).
+## Vencida num save anterior (Continuar): sem barreira e sem inimigos.
+func restore_cleared() -> void:
+	is_cleared = true
+	set_barrier(false)
+
+
 func reset_zone() -> void:
 	is_active = false
 	set_barrier(false)

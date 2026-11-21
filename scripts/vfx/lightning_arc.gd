@@ -2,6 +2,7 @@ class_name LightningArc
 extends MeshInstance3D
 ## Raio procedural reutilizável (CLAUDE.md › Efeitos elétricos). Toda magia de raio usa esta cena,
 ## passando origem, destino, cor (do elemento), duração, espessura e flash de luz opcional.
+## As instâncias vêm do Object Pooling (autoload Pools) e voltam para ele ao apagar.
 
 const SCENE_PATH := "res://scenes/vfx/lightning_arc.tscn"
 const DEFAULT_COLOR := Color(0.6, 0.85, 1.0)
@@ -24,24 +25,31 @@ var _immediate: ImmediateMesh
 var _light: OmniLight3D
 
 
+static var _scene: PackedScene
+
+var _base_width: float = 0.0
+var _base_jaggedness: float = 0.0
+var _base_lifetime: float = 0.0
+var _initialized: bool = false
+
+
 static func spawn(parent: Node, from: Vector3, to: Vector3, color: Color = DEFAULT_COLOR,
 		duration: float = -1.0, width_scale: float = 1.0, flash_energy: float = 0.0) -> LightningArc:
-	var arc := (load(SCENE_PATH) as PackedScene).instantiate() as LightningArc
-	arc._from = from
-	arc._to = to
-	arc._color = color
-	arc._flash_energy = flash_energy
-	arc.width *= width_scale
-	arc.jaggedness *= sqrt(width_scale)
-	if duration > 0.0:
-		arc.lifetime = duration
-	parent.add_child(arc)
+	if _scene == null:
+		_scene = load(SCENE_PATH) as PackedScene
+	var arc := Pools.acquire(&"lightning_arc", _scene.instantiate, parent) as LightningArc
+	arc._begin(from, to, color, duration, width_scale, flash_energy)
 	return arc
 
 
 func _ready() -> void:
+	if _initialized:
+		return
+	_initialized = true
+	_base_width = width
+	_base_jaggedness = jaggedness
+	_base_lifetime = lifetime
 	top_level = true
-	global_transform = Transform3D.IDENTITY
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_immediate = ImmediateMesh.new()
 	mesh = _immediate
@@ -49,13 +57,29 @@ func _ready() -> void:
 	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_light = OmniLight3D.new()
+	_light.omni_range = FLASH_RANGE
+	_light.shadow_enabled = false
+	add_child(_light)
+
+
+## Prepara um raio novo (primeiro uso ou reutilizado do pool).
+func _begin(from: Vector3, to: Vector3, color: Color, duration: float, width_scale: float, flash_energy: float) -> void:
+	_from = from
+	_to = to
+	_color = color
+	_flash_energy = flash_energy
+	width = _base_width * width_scale
+	jaggedness = _base_jaggedness * sqrt(width_scale)
+	lifetime = duration if duration > 0.0 else _base_lifetime
+	_age = 0.0
+	_since_flicker = 0.0
+	global_transform = Transform3D.IDENTITY
 	_material.albedo_color = _color
-	if _flash_energy > 0.0:
-		_light = OmniLight3D.new()
+	_light.visible = _flash_energy > 0.0
+	if _light.visible:
 		_light.light_color = _color
 		_light.light_energy = _flash_energy
-		_light.omni_range = FLASH_RANGE
-		add_child(_light)
 		_light.global_position = _from.lerp(_to, 0.5)
 	_rebuild()
 
@@ -63,12 +87,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_age += delta
 	if _age >= lifetime:
-		queue_free()
+		Pools.release(self)
 		return
 	var faded: Color = _material.albedo_color
 	faded.a = 1.0 - _age / lifetime
 	_material.albedo_color = faded
-	if _light != null:
+	if _light.visible:
 		_light.light_energy = _flash_energy * faded.a
 	_since_flicker += delta
 	if _since_flicker >= flicker_interval:

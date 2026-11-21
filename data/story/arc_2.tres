@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="StoryArc" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/story_arc.gd" id="1_arc"]
+[ext_resource type="Script" path="res://scripts/resources/story_objective.gd" id="2_objective"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("2_objective")
+id = &"a2_grom"
+text = "Derrote Grom, o Quebra-Pontes"
+trigger = 2
+param = "boss_warrok"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("2_objective")
+id = &"a2_fogueira"
+text = "Acenda a fogueira do outro lado da ponte"
+trigger = 1
+param = "153"
+
+[resource]
+script = ExtResource("1_arc")
+title = "A Ponte de Pedra"
+intro_lines = Array[String](["Grom, o Quebra-Pontes, foi um guardião da estrada antes da Mácula. Agora só sabe esmagar.", "Kael|Fique fora do alcance quando ele erguer os punhos. O chão vai tremer."])
+objectives = Array[ExtResource("2_objective")]([SubResource("Objective_0"), SubResource("Objective_1")])
+outro_lines = Array[String](["A ponte está livre. Os cavaleiros dispersos da Ordem do Grifo voltam a falar do raio de Valdren.", "Kael|O Bosque Morto vem a seguir. Ouço algo saltando entre as árvores."])
+reputation_rewards = Dictionary[StringName, int]({&"ordem_grifo": 15})
+gold_reward = 120

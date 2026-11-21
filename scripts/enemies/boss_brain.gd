@@ -219,8 +219,7 @@ func _fire_orb() -> void:
 	var hurtbox := enemy.target.get_node_or_null(^"Hurtbox") as Hurtbox if enemy.target != null else null
 	if hurtbox == null or enemy.projectile_scene == null:
 		return
-	var projectile := enemy.projectile_scene.instantiate() as EnemyProjectile
-	_vfx_parent().add_child(projectile)
+	var projectile := EnemyProjectile.spawn(enemy.projectile_scene, _vfx_parent())
 	var side := enemy.global_basis.x * randf_range(-0.8, 0.8)
 	var origin := enemy.global_position + Vector3.UP * PROJECTILE_ORIGIN_HEIGHT * enemy.data.body_scale + side
 	var info := DamageInfo.new()
@@ -259,7 +258,7 @@ func _landing_point() -> Vector3:
 
 func _clear_warning() -> void:
 	if _warning != null and is_instance_valid(_warning):
-		_warning.queue_free()
+		Pools.release(_warning)
 	_warning = null
 
 

@@ -10,6 +10,9 @@ signal lock_changed(locked: bool)
 
 const SOFT_COLOR := Color(0.45, 0.85, 1.0)
 const LOCKED_COLOR := Color(1.0, 0.35, 0.25)
+## Mira livre: raio do círculo da mira (fração da altura da tela) e altura do peito do inimigo.
+const FREE_AIM_SCREEN_RADIUS: float = 0.08
+const FREE_AIM_HEIGHT: float = 1.1
 
 @export var marker: MeshInstance3D
 @export var marker_height: float = 0.04
@@ -36,7 +39,9 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not enabled:
 		return
-	if event.is_action_pressed(&"lock_on"):
+	if event.is_action_pressed(&"toggle_aim"):
+		toggle_aim_mode()
+	elif event.is_action_pressed(&"lock_on"):
 		toggle_lock()
 	elif locked and event.is_action_pressed(&"target_next"):
 		cycle(1)
@@ -58,10 +63,55 @@ func _physics_process(_delta: float) -> void:
 			else:
 				_set_locked(false)
 	if not locked:
-		var nearest := _nearest_to_hero(list, acquire_range)
+		var nearest := _under_crosshair(list) if is_free_aim() else _nearest_to_hero(list, acquire_range)
 		if nearest != current:
 			set_target(nearest, false)
 	_update_marker()
+
+
+# --- Mira híbrida (GDD §6.4) ---------------------------------------------------
+
+## Mira livre: só vale o inimigo que está na mira (centro da tela); nada é escolhido por proximidade
+## e o herói não gira sozinho para o alvo. Travar (Q) continua disponível nos dois modos.
+func is_free_aim() -> bool:
+	return GameState.aim_mode == GameState.AimMode.FREE
+
+
+func toggle_aim_mode() -> void:
+	set_aim_mode(GameState.AimMode.ASSISTED if is_free_aim() else GameState.AimMode.FREE)
+
+
+func set_aim_mode(mode: GameState.AimMode) -> void:
+	if GameState.aim_mode == mode:
+		return
+	GameState.aim_mode = mode
+	if mode == GameState.AimMode.FREE and not locked:
+		set_target(null, false)
+	Events.aim_mode_changed.emit(mode)
+	SaveManager.autosave()
+
+
+## Inimigo mais perto do centro da tela, dentro do círculo da mira e do alcance de travar.
+func _under_crosshair(list: Array[Enemy]) -> Enemy:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return null
+	var size := get_viewport().get_visible_rect().size
+	var center := size * 0.5
+	var radius := size.y * FREE_AIM_SCREEN_RADIUS
+	var best: Enemy = null
+	var best_distance := radius * radius
+	for enemy: Enemy in list:
+		if _distance(enemy) > lock_range:
+			continue
+		var chest := enemy.global_position + Vector3.UP * FREE_AIM_HEIGHT * enemy.data.body_scale
+		if camera.is_position_behind(chest):
+			continue
+		var distance := camera.unproject_position(chest).distance_squared_to(center)
+		if distance < best_distance:
+			best_distance = distance
+			best = enemy
+	return best
 
 
 func candidates() -> Array[Enemy]:

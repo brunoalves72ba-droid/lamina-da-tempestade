@@ -51,6 +51,8 @@ var _charge_normal_style: StyleBox
 var _power_slots: Array[PowerSlot] = []
 
 
+## Objetivo, narração e mira (StoryOverlay).
+var story: StoryOverlay
 var _boss_panel: VBoxContainer
 var _boss_name: Label
 var _boss_bar: ProgressBar
@@ -64,7 +66,12 @@ func _ready() -> void:
 	_gold_label.text = ""
 	Events.damage_taken.connect(_on_damage_taken)
 	Events.boss_engaged.connect(_on_boss_engaged)
+	Events.aim_mode_changed.connect(func(mode: int) -> void:
+		show_feedback("MIRA LIVRE" if mode == GameState.AimMode.FREE else "MIRA ASSISTIDA", READY_COLOR))
 	_build_boss_panel()
+	story = StoryOverlay.new()
+	story.name = "StoryOverlay"
+	$Root.add_child(story)
 
 
 ## Barra de vida do chefão: larga, no alto e no centro (abaixo do alvo), com o nome dele.

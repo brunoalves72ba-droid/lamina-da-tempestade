@@ -370,3 +370,24 @@ Animações: 32 escolhidas dos pacotes "Pro Sword and Shield" e "Pro Magic" medi
 | Música de chefão | "Boss Battle #2 [Symphonic Metal]" (nene) |
 
 Os arquivos foram convertidos para OGG e os longos foram cortados (`assets/audio/sfx/`, `assets/audio/music/`).
+
+## 17. Rumo: RPG de ação sombrio em mundo aberto (plano técnico, 21/11/2026)
+
+Objetivo: transformar o percurso linear num **mundo aberto medieval sombrio** (liberdade de exploração e eventos dinâmicos), com combate visceral, história em arcos e poderes de raio cinematográficos. Só mecânicas podem ser inspiradas em outros jogos; nomes, arte, música e fases são originais.
+
+| Fase | Conteúdo | Situação |
+|---|---|---|
+| A. Base | Object Pooling (`Pools`), `AudioManager` com canais limitados, save v2 com auto-save e Continuar da última fogueira, arcos de história com objetivo e narração na HUD, mira híbrida (assistida/livre, tecla **T**), reputação (dados), New Game+ (dados) | ✅ feito |
+| B. Visual e combate | Shaders de raio/plasma, luzes pulsantes, bloom/distorção, clima (chuva/tempestade potencializa o raio), dia/noite, status Eletrocutado, condução por água/metal, crateras e fumaça, choque de espadas, gore estilizado e finalização em câmera lenta | a fazer |
+| C. IA e mundo | Inimigos demoníacos (shader de corrupção, olhos brilhantes, aura), IA de flanco/investida/defesa/contra-ataque, hordas por arco, mapa aberto, eventos dinâmicos (emboscadas, mercadores pedindo socorro, patrulhas), efeito da reputação em NPCs/missões/preços | a fazer |
+| D. Fluxo e loja | Menu título (Novo Jogo, Continuar, Configurações, Sair), tela de carregamento com progresso real e dicas, introdução e cutscenes de marco, encerramento, loja unificada (espadas, armaduras, poderes), Arena de Hordas | a fazer |
+
+**Campanha (Fase A):** 4 arcos em `data/story/` — *A Trilha dos Corvos*, *A Ponte de Pedra* (Grom), *O Bosque Morto* (Mutante), *O Santuário das Tempestades* (Guardião). Cada arco narra a abertura, mostra um objetivo por vez e, ao terminar, narra o encerramento, dá ouro e reputação e salva. Protagonista: Kael, último cavaleiro da Ordem do Grifo de Prata; inimigo: a Mácula.
+
+**Facções (reputação −100 a 100):** Ordem do Grifo de Prata, Guilda dos Mercadores (preços −15% a +15%), Vilarejo de Pedra-Cinza.
+
+**Mira (GDD §6.4):** *Assistida* — o inimigo mais perto é destacado e o herói vira para ele nos golpes, sem prender a câmera (Q ainda trava). *Livre* — só o inimigo no círculo da mira (centro da tela) vira alvo; golpes saem para onde a câmera aponta; aparece a mira "+".
+
+**Save v2 (`user://save.json`):** ouro, nível/XP, upgrades, elemento, espadas (tem/equipada), reputação, arco e objetivos, fim de jogo, New Game+, metro da última fogueira, qualidade gráfica e mira. Gravado em arquivo temporário e trocado no fim. Auto-save em fogueiras, compras, objetivos/arcos e fim de partida. Saves v1 continuam carregando.
+
+**Espadas (em andamento):** Cimitarra, Lâmina Rúnica e Espada Celeste importadas em `assets/weapons/` com encaixe automático na mão (`Equipment.fit_sword`); falta a loja unificada e os drops dos chefões (Fase D). A espada "Halo" veio só em `.blend` (precisa de FBX/glTF). Licenças das espadas a confirmar na página de origem.

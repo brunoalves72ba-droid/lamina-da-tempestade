@@ -53,16 +53,20 @@ func _spawn(spawn_position: Vector3, text: String, color: Color, size: int) -> v
 	var camera := get_viewport().get_camera_3d()
 	if camera != null and camera.global_position.distance_to(spawn_position) < min_camera_distance:
 		return
-	var label := Label3D.new()
+	var label := Pools.acquire(&"damage_number", _new_label, self) as Label3D
 	label.text = text
 	label.modulate = color
 	label.font_size = size
 	label.outline_size = size / 6
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	add_child(label)
 	label.position = spawn_position
-	var tween := label.create_tween().set_parallel()
+	var tween := Pools.tween(label).set_parallel()
 	tween.tween_property(label, "position:y", spawn_position.y + rise_height, lifetime)
 	tween.tween_property(label, "modulate:a", 0.0, lifetime * 0.5).set_delay(lifetime * 0.5)
-	tween.chain().tween_callback(label.queue_free)
+	tween.chain().tween_callback(Pools.release.bind(label))
+
+
+func _new_label() -> Node:
+	var label := Label3D.new()
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	return label

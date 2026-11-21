@@ -50,6 +50,8 @@ var _zone_generation: int = 0
 var _finished: bool = false
 var _started: bool = false
 var _respawn_point: Vector3 = Vector3.ZERO
+## Arcos de história, objetivo atual e narração (GDD §4.1).
+var story: StoryDirector
 var _pause_menu: PauseMenu
 
 @onready var player: Player = %Player
@@ -106,6 +108,11 @@ func _ready() -> void:
 	_apply_player_stats()
 	_respawn_point = terrain.ground_point(route_point(1.5)) + Vector3.UP * 0.2
 	_place_player(_respawn_point, route_direction(1.5))
+	_restore_saved_progress()
+	story = StoryDirector.new()
+	story.name = "StoryDirector"
+	add_child(story)
+	story.begin()
 	_hud.bind_player(player)
 	_hud.bind_progression()
 	Music.play_track(&"explore")
@@ -219,6 +226,7 @@ func _start_zone(zone: CombatZone) -> void:
 	_active_zone = null
 	player.heal(player.health.max_health * zone_clear_heal_fraction)
 	_hud.show_feedback("CLAREIRA VENCIDA", TITLE_COLOR)
+	Events.zone_cleared.emit(zone.display_name)
 	Music.play_track(&"explore")
 	_hud.show_encounter_text("Siga a trilha até o santuário")
 	zone_cleared.emit(index)
@@ -252,8 +260,10 @@ func _on_enemy_killed(enemy: Enemy) -> void:
 	run_gold += enemy.data.gold_reward
 	_hud.show_gold(run_gold)
 	SfxLibrary.play(player, &"coins")
-	if enemy.is_boss() and _active_zone != null:
-		Music.play_track(&"combat")
+	if enemy.is_boss():
+		Events.boss_defeated.emit(StringName(enemy.data.resource_path.get_file().get_basename()))
+		if _active_zone != null:
+			Music.play_track(&"combat")
 	GameState.add_xp(enemy.data.xp_reward)
 
 
@@ -284,12 +294,33 @@ func _apply_player_stats() -> void:
 			max_health + level_bonus * progression.health_per_level, reduction)
 
 
+## Continuar: fogueiras e clareiras antes da última fogueira salva já contam, e o herói
+## começa nela (auto-save guarda GameState.checkpoint_progress).
+func _restore_saved_progress() -> void:
+	var saved := GameState.checkpoint_progress
+	if saved <= 0.0:
+		return
+	var restored: Checkpoint = null
+	for checkpoint: Checkpoint in checkpoints:
+		if checkpoint.route_progress <= saved + 0.01:
+			checkpoint.restore_lit()
+			restored = checkpoint
+	for zone: CombatZone in zones:
+		if zone.route_progress < saved:
+			zone.restore_cleared()
+	if restored != null:
+		_respawn_point = restored.respawn_point()
+		_place_player(_respawn_point, route_direction(restored.route_progress))
+
+
 func _on_checkpoint_lit(checkpoint: Checkpoint) -> void:
 	_respawn_point = checkpoint.respawn_point()
 	GameState.add_gold(run_gold)
 	run_gold = 0
 	_hud.show_gold(run_gold)
 	player.heal(player.health.max_health)
+	GameState.checkpoint_progress = maxf(GameState.checkpoint_progress, checkpoint.route_progress)
+	Events.checkpoint_reached.emit(checkpoint.route_progress)
 	SaveManager.save_game()
 	_hud.show_feedback("FOGUEIRA ACESA — PROGRESSO SALVO", TITLE_COLOR)
 	checkpoint_lit.emit(checkpoint)
@@ -327,6 +358,7 @@ func _place_player(point: Vector3, facing: Vector3) -> void:
 
 func _victory() -> void:
 	is_complete = true
+	Events.shrine_reached.emit()
 	completed.emit()
 	_finish(true)
 
@@ -337,6 +369,8 @@ func _finish(victory: bool) -> void:
 	_finished = true
 	gold_earned = run_gold + (rewards.completion_bonus if rewards != null and victory else 0)
 	GameState.add_gold(gold_earned)
+	if victory:
+		GameState.checkpoint_progress = 0.0  # a próxima partida começa do início da trilha
 	SaveManager.save_game()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if result_scene != null:

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="StoryArc" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/story_arc.gd" id="1_arc"]
+[ext_resource type="Script" path="res://scripts/resources/story_objective.gd" id="2_objective"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("2_objective")
+id = &"a4_guardiao"
+text = "Derrote o Guardião do Santuário"
+trigger = 2
+param = "boss_maw"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("2_objective")
+id = &"a4_santuario"
+text = "Chegue ao Santuário das Tempestades"
+trigger = 3
+param = ""
+
+[resource]
+script = ExtResource("1_arc")
+title = "O Santuário das Tempestades"
+intro_lines = Array[String](["O Guardião do Santuário foi o último sacerdote do raio. A Mácula o fez esquecer a quem servia.", "Kael|Que a tempestade me reconheça uma última vez."])
+objectives = Array[ExtResource("2_objective")]([SubResource("Objective_0"), SubResource("Objective_1")])
+outro_lines = Array[String](["O fogo do céu desce sobre o santuário. Pela primeira vez desde a queda, chove sobre Valdren — e a chuva é limpa.", "A Mácula recua para as criptas. Não está morta. Mas agora o reino tem um cavaleiro da tempestade."])
+reputation_rewards = Dictionary[StringName, int]({&"ordem_grifo": 10, &"guilda_mercadores": 10, &"vilarejo_cinzas": 10})
+gold_reward = 300

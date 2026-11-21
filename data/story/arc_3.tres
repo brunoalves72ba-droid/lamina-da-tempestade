@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="StoryArc" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/story_arc.gd" id="1_arc"]
+[ext_resource type="Script" path="res://scripts/resources/story_objective.gd" id="2_objective"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("2_objective")
+id = &"a3_mutante"
+text = "Derrote o Mutante do Bosque"
+trigger = 2
+param = "boss_mutant"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("2_objective")
+id = &"a3_fogueira"
+text = "Acenda a última fogueira antes do santuário"
+trigger = 1
+param = "200"
+
+[resource]
+script = ExtResource("1_arc")
+title = "O Bosque Morto"
+intro_lines = Array[String](["No Bosque Morto, a Mácula retorce até as feras. O Mutante caça quem entra, saltando do alto.", "Kael|Quando o círculo vermelho aparecer debaixo de mim, é hora de correr."])
+objectives = Array[ExtResource("2_objective")]([SubResource("Objective_0"), SubResource("Objective_1")])
+outro_lines = Array[String](["As caravanas da Guilda dos Mercadores voltam a cruzar o bosque. Lembrarão de quem abriu o caminho.", "Kael|O portão do santuário está logo adiante. O guardião dele já sabe que estou chegando."])
+reputation_rewards = Dictionary[StringName, int]({&"guilda_mercadores": 15})
+gold_reward = 180

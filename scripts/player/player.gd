@@ -200,17 +200,22 @@ func _apply_motion(delta: float) -> void:
 ## Para onde o corpo olha: alvo travado > alvo próximo durante ações de combate > direção do movimento.
 func _update_facing(delta: float) -> void:
 	var combat_action := not (state_machine.is_in(&"Idle") or state_machine.is_in(&"Dodge"))
-	var face_target := target != null and (targeting.locked or (combat_action and is_target_in_soft_range()))
+	var free_aim := targeting.is_free_aim() and not targeting.locked
+	var face_target := not free_aim and target != null \
+			and (targeting.locked or (combat_action and is_target_in_soft_range()))
 	var desired := Vector3.ZERO
 	if face_target:
 		desired = target.global_position - global_position
+	elif free_aim and combat_action:
+		# Mira livre: golpes e magias saem para onde a câmera aponta.
+		desired = Vector3.FORWARD.rotated(Vector3.UP, view_yaw)
 	elif not _move_intent.is_zero_approx() and not state_machine.is_in(&"Attack"):
 		desired = _move_intent
 	desired.y = 0.0
 	if desired.length_squared() < 0.0001:
 		return
 	var target_yaw := atan2(-desired.x, -desired.z)
-	var step := INF if combat_action and face_target else data.turn_speed * delta
+	var step := INF if combat_action and (face_target or free_aim) else data.turn_speed * delta
 	rotation.y = target_yaw if step == INF else rotate_toward(rotation.y, target_yaw, step)
 
 

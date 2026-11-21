@@ -16,6 +16,8 @@ extends Resource
 @export_group("Escala dos inimigos")
 ## Cada nível de equipamento comprado (espada, armadura) vale isto em nível de ameaça.
 @export var equipment_threat: float = 0.5
+## Cada New Game+ soma isto ao nível de ameaça.
+@export var new_game_plus_threat: float = 6.0
 ## Inimigos extras por onda a cada nível de ameaça (arredonda para baixo).
 @export var extra_enemies_per_level: float = 0.5
 @export var max_extra_enemies: int = 6

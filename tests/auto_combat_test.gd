@@ -56,10 +56,34 @@ func _ready() -> void:
 	await _test_elite_double_strike()
 	await _test_free_movement()
 	await _test_boss_powers()
+	await _test_free_aim()
 	await _test_combo_and_kill()
 
 	print("\n%s — %d falha(s)" % ["COMBATE OK" if _failures == 0 else "COMBATE FALHOU", _failures])
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+## Mira livre: só o inimigo na mira vira alvo (sem pegar o mais próximo); assistida volta ao normal.
+func _test_free_aim() -> void:
+	print("\n[Mira híbrida]")
+	_sandbox.reset()
+	_enemy.auto_attack = false
+	await _wait(0.3)
+	_check(_player.target == _enemy, "mira assistida pega o inimigo mais próximo")
+	_player.targeting.set_aim_mode(GameState.AimMode.FREE)
+	var camera := get_viewport().get_camera_3d()
+	camera.look_at(_enemy.global_position + Vector3.UP * 1.1, Vector3.UP)
+	await _wait(0.2)
+	_check(_player.target == _enemy, "mira livre pega o inimigo que está na mira")
+	camera.look_at(_enemy.global_position + Vector3(6.0, 1.1, 0.0), Vector3.UP)
+	await _wait(0.2)
+	_check(_player.target == null, "mira livre: inimigo fora da mira não vira alvo")
+	_player.targeting.set_aim_mode(GameState.AimMode.ASSISTED)
+	await _wait(0.2)
+	_check(_player.target == _enemy, "voltando à mira assistida, o alvo volta")
+	camera.look_at(_sandbox.camera_focus, Vector3.UP)
+	_sandbox.reset()
+	_enemy.auto_attack = true
 
 
 ## Chefão: ruge ao perceber o herói (barra de vida), golpe no chão acerta quem está no círculo

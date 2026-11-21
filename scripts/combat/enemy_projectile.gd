@@ -13,6 +13,11 @@ var _elapsed: float = 0.0
 var _done: bool = false
 
 
+## Pega um projétil do Object Pooling (um pool por cena de projétil).
+static func spawn(scene: PackedScene, parent: Node) -> EnemyProjectile:
+	return Pools.acquire(StringName("projectile:" + scene.resource_path), scene.instantiate, parent) as EnemyProjectile
+
+
 func set_color(color: Color) -> void:
 	var mesh := $Mesh as MeshInstance3D
 	var material := (mesh.mesh.surface_get_material(0) as StandardMaterial3D).duplicate() as StandardMaterial3D
@@ -28,13 +33,15 @@ func launch(start: Vector3, target_hurtbox: Hurtbox, info: DamageInfo, flight_ti
 	_info = info
 	_info.on_parried = _on_parried
 	_flight_time = maxf(flight_time, 0.01)
+	_elapsed = 0.0
+	_done = false
 
 
 func _physics_process(delta: float) -> void:
 	if _done:
 		return
 	if _target == null or not is_instance_valid(_target):
-		queue_free()
+		Pools.release(self)
 		return
 	_elapsed += delta
 	var aim := _target.global_position + Vector3.UP * AIM_HEIGHT
@@ -46,9 +53,9 @@ func _physics_process(delta: float) -> void:
 	if t >= 1.0:
 		_done = true
 		_target.receive_hit(_info)
-		queue_free()
+		Pools.release(self)
 
 
 func _on_parried() -> void:
 	_done = true
-	queue_free()
+	Pools.release(self)

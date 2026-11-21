@@ -255,8 +255,7 @@ func begin_telegraph() -> void:
 func launch_projectile() -> void:
 	if projectile_scene == null or _target_hurtbox == null:
 		return
-	var projectile := projectile_scene.instantiate() as EnemyProjectile
-	get_parent().add_child(projectile)
+	var projectile := EnemyProjectile.spawn(projectile_scene, get_parent())
 	projectile.set_color(data.projectile_color)
 	var origin := global_position + Vector3.UP * PROJECTILE_ORIGIN_HEIGHT * data.body_scale
 	projectile.launch(origin, _target_hurtbox, _build_attack_info(), data.projectile_flight_time)

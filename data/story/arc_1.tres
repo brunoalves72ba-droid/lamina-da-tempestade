@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="StoryArc" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/story_arc.gd" id="1_arc"]
+[ext_resource type="Script" path="res://scripts/resources/story_objective.gd" id="2_objective"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("2_objective")
+id = &"a1_corvos"
+text = "Vença a emboscada na Clareira dos Corvos"
+trigger = 0
+param = "Clareira dos Corvos"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("2_objective")
+id = &"a1_fogueira1"
+text = "Acenda a fogueira à beira da trilha"
+trigger = 1
+param = "57"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("2_objective")
+id = &"a1_cinzas"
+text = "Atravesse o Vale das Cinzas"
+trigger = 0
+param = "Vale das Cinzas"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("2_objective")
+id = &"a1_fogueira2"
+text = "Acenda a fogueira antes da ponte"
+trigger = 1
+param = "105"
+
+[resource]
+script = ExtResource("1_arc")
+title = "A Trilha dos Corvos"
+intro_lines = Array[String](["O reino de Valdren caiu numa noite sem estrelas. A Mácula subiu das criptas e tomou vilas, estradas e homens.", "Restou um único cavaleiro da Ordem do Grifo de Prata, marcado pela tempestade: a espada dele chama o raio.", "Kael|Se o Santuário das Tempestades ainda arde, ainda há como reacender o céu. Sigo pela trilha dos corvos."])
+objectives = Array[ExtResource("2_objective")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+outro_lines = Array[String](["Os aldeões de Pedra-Cinza viram o clarão no vale. Pela primeira vez em meses, alguém revidou.", "Kael|A ponte de pedra é o único caminho. E algo enorme guarda a passagem."])
+reputation_rewards = Dictionary[StringName, int]({&"vilarejo_cinzas": 15})
+gold_reward = 60
