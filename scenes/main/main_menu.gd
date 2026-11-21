@@ -15,6 +15,7 @@ var _play_button: Button
 
 
 func _ready() -> void:
+	Music.play_track(&"explore")
 	Hitstop.reset()
 	get_tree().paused = false
 	var background := ColorRect.new()

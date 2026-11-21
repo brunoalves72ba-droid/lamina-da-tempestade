@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/characters/bosses/maw.fbx" id="2_model"]
+[ext_resource type="Script" path="res://scripts/resources/boss_data.gd" id="3_boss"]
+
+[sub_resource type="Resource" id="Resource_boss"]
+script = ExtResource("3_boss")
+title = "Guardião do Santuário"
+powers = Array[int]([2, 0, 1])
+power_color = Color(0.7, 0.3, 1, 1)
+power_cooldown = 5.5
+slam_radius = 5.0
+slam_damage = 32.0
+slam_windup = 1.2
+leap_radius = 3.8
+leap_damage = 36.0
+volley_count = 6
+volley_damage = 13.0
+
+[resource]
+script = ExtResource("1_script")
+model = ExtResource("2_model")
+display_name = "Guardião do Santuário"
+max_health = 950.0
+attack_damage = 32.0
+body_scale = 1.15
+model_variant = 3
+strike_animation = &"attack_3"
+gold_reward = 300
+xp_reward = 600
+attack_kind = 0
+strikes_per_attack = 1
+telegraph_time = 0.8
+strike_active_time = 0.1
+recover_time = 0.75
+projectile_flight_time = 0.35
+projectile_color = Color(0.65, 0.25, 1, 1)
+engage_distance = 3.0
+position_tolerance = 0.5
+move_speed = 3.2
+separation_radius = 2.6
+aggro_range = 22.0
+run_speed = 4.8
+strafe_speed = 1.6
+strafe_switch_min = 1.2
+strafe_switch_max = 2.8
+attack_reach = 3.5
+acceleration = 16.0
+turn_speed = 10.0
+gravity = 24.0
+stun_time = 1.1
+has_poise = true
+stagger_time = 0.3
+knockback_speed = 4.0
+spawn_time = 1.4
+boss = SubResource("Resource_boss")

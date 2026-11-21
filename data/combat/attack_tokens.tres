@@ -4,5 +4,5 @@
 
 [resource]
 script = ExtResource("1_script")
-interval_min = 1.0
-interval_max = 2.0
+interval_min = 0.7
+interval_max = 1.5

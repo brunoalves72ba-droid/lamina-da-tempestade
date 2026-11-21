@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b0be0h371gpfj"
-path="res://.godot/imported/xbot.fbx-d330789601ca861608b92ccf5419149b.scn"
+uid="uid://b3201hty4d0yq"
+path="res://.godot/imported/warrok.fbx-17139509a255469d232330cd5bd04cb3.scn"
 
 [deps]
 
-source_file="res://assets/characters/xbot/xbot.fbx"
-dest_files=["res://.godot/imported/xbot.fbx-d330789601ca861608b92ccf5419149b.scn"]
+source_file="res://assets/characters/bosses/warrok.fbx"
+dest_files=["res://.godot/imported/warrok.fbx-17139509a255469d232330cd5bd04cb3.scn"]
 
 [params]
 

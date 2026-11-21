@@ -1,38 +1,40 @@
 [gd_resource type="Resource" script_class="EnemyData" format=3]
 
 [ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/characters/enemies/parasite.fbx" id="2_model"]
 
 [resource]
 script = ExtResource("1_script")
-display_name = "Elite"
+model = ExtResource("2_model")
+display_name = "Parasita"
 max_health = 150.0
 attack_damage = 25.0
-body_color = Color(0.28, 0.07, 0.09, 1)
-body_scale = 1.3
+body_scale = 1.05
 model_variant = 2
+strike_animation = &"elite_strike"
 gold_reward = 40
 xp_reward = 90
 attack_kind = 0
 strikes_per_attack = 2
-telegraph_time = 0.8
+telegraph_time = 0.7
 strike_active_time = 0.1
-recover_time = 0.8
+recover_time = 0.6
 projectile_flight_time = 0.35
 engage_distance = 2.2
 position_tolerance = 0.5
-move_speed = 2.0
+move_speed = 2.8
 separation_radius = 1.6
-stun_time = 1.5
-spawn_time = 1.0
-aggro_range = 14.0
-run_speed = 3.2
-strafe_speed = 1.0
-strafe_switch_min = 1.5
-strafe_switch_max = 3.5
+aggro_range = 16.0
+run_speed = 4.6
+strafe_speed = 1.5
+strafe_switch_min = 1.2
+strafe_switch_max = 2.8
 attack_reach = 2.4
-acceleration = 10.0
-turn_speed = 8.0
+acceleration = 16.0
+turn_speed = 10.0
 gravity = 24.0
+stun_time = 1.4
 has_poise = true
-stagger_time = 0.35
-knockback_speed = 3.5
+stagger_time = 0.3
+knockback_speed = 4.0
+spawn_time = 0.8

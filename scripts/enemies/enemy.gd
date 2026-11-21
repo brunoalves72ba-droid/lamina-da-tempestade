@@ -1,6 +1,6 @@
 class_name Enemy
 extends CharacterBody3D
-## Inimigo base: Soldado, Besteiro e Elite mudam só pelo EnemyData.
+## Inimigo base: comuns e chefões mudam só pelo EnemyData (modelo, status, poderes do BossData).
 ## Em guarda mantém distância do herói; só ataca quando o AttackTokenManager concede o token (GDD §6.3).
 
 signal attack_telegraphed(time_to_impact: float)
@@ -14,7 +14,10 @@ const HIT_FLASH_COLOR := Color(1.0, 0.95, 0.85)
 const STUN_COLOR := Color(0.95, 0.82, 0.25)
 const STUN_RIM_INTENSITY: float = 2.0
 const ELEMENT_RIM_INTENSITY: float = 0.7
-const DEATH_REMOVE_DELAY: float = 2.5
+const DEATH_REMOVE_DELAY: float = 2.2
+## Depois de cair, o corpo se desintegra em cinzas e brasas.
+const DISINTEGRATE_DELAY: float = 1.1
+const DISINTEGRATE_COLOR := Color(1.0, 0.55, 0.2)
 const PROJECTILE_ORIGIN_HEIGHT: float = 1.3
 ## Inimigos em guarda do lado da câmera (produto escalar acima disto) contornam o herói
 ## para a frente, para não taparem a visão.
@@ -50,6 +53,9 @@ var _show_stun_label: bool = false
 var _target_health: HealthComponent
 var _target_hurtbox: Hurtbox
 var _counter_consumed: bool = false
+## Poderes de chefão (só existe se data.boss != null).
+var boss_brain: BossBrain
+var _death_timer: SceneTreeTimer
 
 @onready var health: HealthComponent = %HealthComponent
 @onready var hurtbox: Hurtbox = %Hurtbox
@@ -64,9 +70,13 @@ var _counter_consumed: bool = false
 func _ready() -> void:
 	assert(data != null, "Enemy precisa de EnemyData")
 	add_to_group(GROUP)
-	body.set_body_color(data.body_color)
+	body.setup(data.model)
 	_model.scale = Vector3.ONE * data.body_scale
+	_apply_body_scale()
 	_equip()
+	if data.boss != null:
+		boss_brain = BossBrain.new(self, data.boss)
+		add_child(boss_brain)
 	_show_stun_label = false
 	set_element(element)
 	health.reset(data.max_health * health_scale)
@@ -93,31 +103,50 @@ func _physics_process(delta: float) -> void:
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	velocity.y = -0.5 if is_on_floor() else velocity.y - data.gravity * delta
+	if boss_brain != null and boss_brain.is_airborne():
+		return
 	move_and_slide()
 	if not health.is_dead:
 		body.update_locomotion(global_basis.inverse() * velocity, is_aware, false)
 
 
-## Armas conforme o tipo: Soldado e Elite com espada e escudo; Besteiro com besta; Elite com chifres.
+## Só o Soldado carrega armas (espada e escudo); os outros lutam com garras e magia.
 func _equip() -> void:
-	var variant := data.model_variant
-	if variant == EnemyData.ModelVariant.CROSSBOWMAN:
-		body.attach(&"mixamorig_RightHand", Equipment.crossbow())
-	else:
-		var blade := StandardMaterial3D.new()
-		blade.albedo_color = Equipment.STEEL.darkened(0.3)
-		blade.metallic = 0.85
-		blade.roughness = 0.35
-		body.attach(&"mixamorig_RightHand", Equipment.sword(blade, 0.75))
-		body.attach(&"mixamorig_LeftForeArm", Equipment.round_shield(), Equipment.round_shield_offset())
-	if variant == EnemyData.ModelVariant.ELITE:
-		body.attach(&"mixamorig_Head", Equipment.horns())
+	if data.model_variant != EnemyData.ModelVariant.SOLDIER:
+		return
+	var blade := StandardMaterial3D.new()
+	blade.albedo_color = Equipment.STEEL.darkened(0.3)
+	blade.metallic = 0.85
+	blade.roughness = 0.35
+	body.attach(&"mixamorig_RightHand", Equipment.sword(blade, 0.75))
+	body.attach(&"mixamorig_LeftForeArm", Equipment.round_shield(), Equipment.round_shield_offset())
+
+
+## Personagens maiores (chefões): colisão, área de dano, área do golpe e rótulo acompanham a escala.
+func _apply_body_scale() -> void:
+	var s := data.body_scale
+	if is_equal_approx(s, 1.0):
+		return
+	for shape_node: CollisionShape3D in [$CollisionShape3D, $Hurtbox/CollisionShape3D] as Array[CollisionShape3D]:
+		var capsule := (shape_node.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
+		capsule.radius *= s
+		capsule.height *= s
+		shape_node.shape = capsule
+		shape_node.position *= s
+	var hit_shape := $Hitbox/CollisionShape3D as CollisionShape3D
+	var box := (hit_shape.shape as BoxShape3D).duplicate() as BoxShape3D
+	box.size *= s
+	hit_shape.shape = box
+	hit_shape.position *= s
+	_stun_label.position.y *= s
 
 
 ## Afinidade elemental (GDD §7): contorno na cor do elemento; neutro sem contorno.
 func set_element(new_element: Element.Type) -> void:
 	element = new_element
-	if element == Element.Type.NONE:
+	if boss_brain != null and boss_brain.is_enraged:
+		body.set_rim(data.boss.power_color, BossBrain.RAGE_RIM_INTENSITY)
+	elif element == Element.Type.NONE:
 		body.set_rim(Color.BLACK, 0.0)
 	else:
 		body.set_rim(Element.color(element), ELEMENT_RIM_INTENSITY)
@@ -162,8 +191,15 @@ func can_receive_token() -> bool:
 
 
 func grant_attack_token() -> void:
+	if boss_brain != null and boss_brain.wants_power():
+		state_machine.transition_to(&"Power", {"power": boss_brain.next_power()})
+		return
 	_strikes_left = data.strikes_per_attack
 	state_machine.transition_to(&"Telegraph")
+
+
+func is_boss() -> bool:
+	return data.boss != null
 
 
 func is_telegraphing() -> bool:
@@ -192,7 +228,12 @@ func reset_state() -> void:
 	hurtbox.invulnerable = false
 	_model.scale = Vector3.ONE * data.body_scale
 	_model.rotation_degrees = Vector3.ZERO
+	if _death_timer != null and _death_timer.timeout.is_connected(_disintegrate):
+		_death_timer.timeout.disconnect(_disintegrate)
+	body.restore()
 	body.stop_action()
+	if boss_brain != null:
+		boss_brain.reset()
 	set_element(element)
 	state_machine.transition_to(&"Idle")
 	attack_finished.emit()
@@ -204,10 +245,8 @@ func begin_telegraph() -> void:
 	telegraph.play(data.telegraph_time)
 	if is_ranged():
 		body.play_action_hit_at(&"shoot", data.telegraph_time - data.projectile_flight_time)
-	elif data.model_variant == EnemyData.ModelVariant.ELITE:
-		body.play_action_hit_at(&"elite_strike", data.telegraph_time)
 	else:
-		body.play_action_hit_at(&"enemy_strike", data.telegraph_time)
+		body.play_action_hit_at(data.strike_animation, data.telegraph_time)
 	SfxLibrary.play(self, &"telegraph")
 	attack_telegraphed.emit(data.telegraph_time)
 
@@ -218,7 +257,8 @@ func launch_projectile() -> void:
 		return
 	var projectile := projectile_scene.instantiate() as EnemyProjectile
 	get_parent().add_child(projectile)
-	var origin := global_position + Vector3.UP * PROJECTILE_ORIGIN_HEIGHT
+	projectile.set_color(data.projectile_color)
+	var origin := global_position + Vector3.UP * PROJECTILE_ORIGIN_HEIGHT * data.body_scale
 	projectile.launch(origin, _target_hurtbox, _build_attack_info(), data.projectile_flight_time)
 	SfxLibrary.play(self, &"bolt_fire")
 
@@ -269,8 +309,21 @@ func play_death() -> void:
 	telegraph.stop()
 	_show_stun_label = false
 	body.play_action(&"death", 1.0, 0.0, true)
+	SfxLibrary.play(self, &"roar" if is_boss() else &"enemy_die")
+	if boss_brain != null:
+		boss_brain.cancel()
+	_death_timer = get_tree().create_timer(DISINTEGRATE_DELAY, false, true)
+	_death_timer.timeout.connect(_disintegrate)
 	if remove_after_death:
 		get_tree().create_timer(DEATH_REMOVE_DELAY, false, true).timeout.connect(queue_free)
+
+
+func _disintegrate() -> void:
+	if not health.is_dead:
+		return
+	var color := Element.color(element) if element != Element.Type.NONE else DISINTEGRATE_COLOR
+	body.disintegrate(color)
+	SfxLibrary.play(self, &"disintegrate")
 
 
 # --- Dano -------------------------------------------------------------------

@@ -6,10 +6,8 @@ extends Node
 signal power_used(slot: int)
 
 const AIM_HEIGHT: float = 1.1
-const CAST_HEIGHT: float = 1.3
-const STORM_SKY_HEIGHT: float = 14.0
-const STORM_BOLTS: int = 3
-const STORM_SPREAD: float = 0.6
+## Raios extras caindo em volta do alvo na Fúria da Tempestade.
+const STORM_BOLTS: int = 4
 
 @export var powers: Array[PowerData] = []
 
@@ -77,9 +75,16 @@ func execute(slot: int) -> void:
 ## Corte eletrificado no alvo; interrompe o aviso dele (quebra a guarda).
 func _voltaic_blade(data: PowerData, target: Enemy) -> void:
 	var color := player.lightning_color()
-	var from := player.global_position + Vector3.UP * CAST_HEIGHT
+	var from := player.blade_tip_position()
 	var to := _aim(target)
-	LightningArc.spawn(_vfx_parent(), from, to, color, 0.22, 1.6, 2.5)
+	var parent := _vfx_parent()
+	LightningArc.spawn(parent, from, to, color, 0.25, 1.8, 0.0)
+	var facing := target.global_position - player.global_position
+	Vfx.slash_arc(parent, to, facing, color, 1.8, 0.25, 0.5)
+	Vfx.slash_arc(parent, to + Vector3.UP * 0.2, facing, color.lightened(0.4), 1.4, 0.2, -0.4)
+	Vfx.sparks(parent, to, color, 40, 8.0, 0.45)
+	Vfx.shockwave(parent, target.global_position, 2.2, color, 0.3)
+	Vfx.flash_light(parent, to, color, 5.0, 7.0, 0.2)
 	SfxLibrary.play(player, &"zap")
 	if target.is_telegraphing():
 		target.interrupt_attack()
@@ -91,12 +96,17 @@ func _voltaic_blade(data: PowerData, target: Enemy) -> void:
 func _chain_lightning(data: PowerData, target: Enemy) -> void:
 	var color := player.lightning_color()
 	var hit: Array[Enemy] = []
-	var from := player.global_position + Vector3.UP * CAST_HEIGHT
+	var from := player.blade_tip_position()
 	var current := target
+	var parent := _vfx_parent()
+	Vfx.flash_light(parent, from, color, 3.0, 6.0, 0.2)
 	for multiplier: float in data.chain_multipliers:
 		if current == null:
 			break
-		LightningArc.spawn(_vfx_parent(), from, _aim(current), color, 0.25, 1.2, 1.5)
+		LightningArc.spawn(parent, from, _aim(current), color, 0.35, 1.4, 0.0)
+		LightningArc.spawn(parent, from, _aim(current), color.lightened(0.5), 0.2, 0.5, 0.0)
+		Vfx.sparks(parent, _aim(current), color, 22, 6.0)
+		Vfx.shockwave(parent, current.global_position, 1.3, color, 0.25)
 		current.hurtbox.receive_hit(player.build_power_info(multiplier, data.is_heavy))
 		hit.append(current)
 		from = _aim(current)
@@ -110,11 +120,15 @@ func _chain_lightning(data: PowerData, target: Enemy) -> void:
 func _storm_fury(data: PowerData, target: Enemy) -> void:
 	var color := player.lightning_color()
 	var ground := target.global_position
-	for i: int in STORM_BOLTS:
-		var jitter := Vector3(randf_range(-STORM_SPREAD, STORM_SPREAD), 0.0, randf_range(-STORM_SPREAD, STORM_SPREAD))
-		var flash := 6.0 if i == 0 else 0.0
-		LightningArc.spawn(_vfx_parent(), ground + jitter + Vector3.UP * STORM_SKY_HEIGHT, ground + Vector3.UP * 0.2,
-				color, 0.45, 4.0, flash)
+	var parent := _vfx_parent()
+	Vfx.lightning_strike(parent, ground, color, data.area_radius, true)
+	for i: int in range(1, STORM_BOLTS + 2):
+		var angle := TAU * i / (STORM_BOLTS + 1) + randf() * 0.5
+		var spot := ground + Vector3(cos(angle), 0.0, sin(angle)) * data.area_radius * randf_range(0.5, 0.9)
+		get_tree().create_timer(0.06 * i, false).timeout.connect(func() -> void:
+			Vfx.lightning_strike(parent, spot, color, 1.4, false))
+	Vfx.shockwave(parent, ground, data.area_radius * 1.6, color, 0.5)
+	Vfx.shockwave(parent, ground, data.area_radius * 0.9, Color.WHITE, 0.3)
 	SfxLibrary.play(player, &"thunder")
 	var others: Array[Enemy] = []
 	for enemy: Enemy in player.targeting.candidates():
@@ -122,7 +136,8 @@ func _storm_fury(data: PowerData, target: Enemy) -> void:
 			others.append(enemy)
 	target.hurtbox.receive_hit(player.build_power_info(data.damage_multiplier, data.is_heavy))
 	for enemy: Enemy in others:
-		LightningArc.spawn(_vfx_parent(), ground + Vector3.UP * 0.3, _aim(enemy), color, 0.3, 1.2)
+		LightningArc.spawn(parent, ground + Vector3.UP * 0.3, _aim(enemy), color, 0.3, 1.2)
+		Vfx.sparks(parent, _aim(enemy), color, 16, 5.0)
 		enemy.hurtbox.receive_hit(player.build_power_info(data.area_multiplier, false))
 
 

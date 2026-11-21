@@ -21,9 +21,21 @@ const POWER_ANIMATIONS: Dictionary = {
 	PowerData.Kind.CHAIN_LIGHTNING: &"cast_chain",
 	PowerData.Kind.STORM_FURY: &"cast_storm",
 }
-const PARRY_ANIMATION_SPEED: float = 1.6
-const HURT_ANIMATION_SPEED: float = 1.2
-const DODGE_TURN_BACK_TIME: float = 0.15
+const PARRY_ANIMATION_SPEED: float = 1.8
+const HURT_ANIMATION_SPEED: float = 1.4
+## Golpes e magias: o resto da animação depois do impacto corre mais rápido (ritmo de ação).
+const ACTION_SPEED: float = 1.4
+const DODGE_TURN_BACK_TIME: float = 0.1
+const DODGE_ANIMATION_SPEED: float = 1.8
+## Imagens residuais na esquiva e no Passo Relâmpago (velocidade do herói).
+const AFTERIMAGES: int = 3
+const AFTERIMAGE_TIME: float = 0.28
+## Malha da espada no modelo do Paladino (os nomes das malhas vêm trocados no arquivo da Mixamo).
+const SWORD_MESH := "Paladin_J_Nordstrom"
+const HERO_RIM_COLOR := Color(0.55, 0.65, 0.85)
+const HERO_RIM_INTENSITY: float = 0.6
+const BLADE_GLOW: float = 1.6
+const BLADE_GLOW_CAST: float = 6.0
 ## Altura de onde sai o Dardo e para onde ele mira no alvo.
 const BOLT_ORIGIN_HEIGHT: float = 1.3
 const TARGET_AIM_HEIGHT: float = 1.1
@@ -33,7 +45,6 @@ const AURA_RADIUS: float = 0.55
 const AURA_MIN_HEIGHT: float = 0.3
 const AURA_MAX_HEIGHT: float = 1.9
 const AURA_ARC_TIME: float = 0.1
-const GLOW_ENERGY: float = 2.0
 
 @export var data: PlayerData
 @export var weapon: WeaponData
@@ -73,19 +84,21 @@ var _dodge_turn_tween: Tween
 @onready var body: AnimatedBody = %Body
 @onready var _model: Node3D = %Model
 
-## Material da lâmina: brilha na cor do elemento.
-var _glow_material: StandardMaterial3D
+## Contorno da lâmina (malha da espada do Paladino): brilha na cor do elemento.
+var _blade_glow: ShaderMaterial
+var _blade_glow_tween: Tween
+## Base e ponta da lâmina (presas à mão direita): origem dos raios e do rastro.
+var blade_base: Marker3D
+var blade_tip: Marker3D
+var _trail: WeaponTrail
 
 
 func _ready() -> void:
 	assert(data != null and weapon != null, "Player precisa de PlayerData e WeaponData")
-	_glow_material = StandardMaterial3D.new()
-	_glow_material.emission_enabled = true
-	_glow_material.metallic = 0.8
-	_glow_material.roughness = 0.25
+	_setup_blade()
 	_update_glow()
-	body.attach(&"mixamorig_RightHand", Equipment.sword(_glow_material))
-	body.attach(&"mixamorig_LeftForeArm", Equipment.kite_shield(), Equipment.kite_shield_offset())
+	# Armadura escura do Paladino: contorno suave para o herói não sumir na noite.
+	body.set_rim(HERO_RIM_COLOR, HERO_RIM_INTENSITY)
 	input_buffer.buffer_time = data.input_buffer_time
 	bolt_cooldown.duration = data.bolt_cooldown
 	charge.maximum = data.charge_max
@@ -236,11 +249,55 @@ func set_element(new_element: Element.Type) -> void:
 	_update_glow()
 
 
+## Espada do próprio modelo: contorno brilhante, marcadores de base/ponta e rastro do golpe.
+func _setup_blade() -> void:
+	_blade_glow = ShaderMaterial.new()
+	_blade_glow.shader = preload("res://shaders/rim_overlay.gdshader")
+	_blade_glow.set_shader_parameter(&"power", 1.2)
+	var sword := body.find_mesh(SWORD_MESH)
+	if sword != null:
+		sword.material_overlay = _blade_glow
+	var points := body.weapon_points(SWORD_MESH, &"mixamorig_RightHand")
+	if points.is_empty():
+		points = [Vector3(0.1, 0, 0), Vector3(0.95, 0, 0)]
+	var holder := Node3D.new()
+	holder.name = "BladePoints"
+	body.attach(&"mixamorig_RightHand", holder)
+	blade_base = Marker3D.new()
+	blade_base.name = "BladeBase"
+	blade_base.position = points[0].lerp(points[1], 0.2)
+	holder.add_child(blade_base)
+	blade_tip = Marker3D.new()
+	blade_tip.name = "BladeTip"
+	blade_tip.position = points[1]
+	holder.add_child(blade_tip)
+	_trail = WeaponTrail.new()
+	_trail.name = "WeaponTrail"
+	_trail.base_marker = blade_base
+	_trail.tip_marker = blade_tip
+	add_child(_trail)
+
+
 func _update_glow() -> void:
 	var color := lightning_color()
-	_glow_material.albedo_color = color.lerp(Color(0.85, 0.88, 0.95), 0.5)
-	_glow_material.emission = color
-	_glow_material.emission_energy_multiplier = GLOW_ENERGY
+	_blade_glow.set_shader_parameter(&"rim_color", color)
+	_blade_glow.set_shader_parameter(&"intensity", BLADE_GLOW)
+	if _trail != null:
+		_trail.color = color
+
+
+## Lâmina brilha forte por um instante (lançando um poder).
+func pulse_blade(duration: float = 0.4) -> void:
+	if _blade_glow_tween != null:
+		_blade_glow_tween.kill()
+	_blade_glow.set_shader_parameter(&"intensity", BLADE_GLOW_CAST)
+	_blade_glow_tween = create_tween()
+	_blade_glow_tween.tween_method(func(v: float) -> void: _blade_glow.set_shader_parameter(&"intensity", v),
+			BLADE_GLOW_CAST, BLADE_GLOW, duration)
+
+
+func blade_tip_position() -> Vector3:
+	return blade_tip.global_position if blade_tip != null else global_position + Vector3.UP * BOLT_ORIGIN_HEIGHT
 
 
 func lightning_color() -> Color:
@@ -348,9 +405,15 @@ func fire_bolt() -> void:
 	info.amount = base_damage * data.bolt_damage_multiplier
 	info.element = element
 	info.source = self
-	var from := global_position + Vector3.UP * BOLT_ORIGIN_HEIGHT
+	var from := blade_tip_position()
 	var to := bolt_target.global_position + Vector3.UP * TARGET_AIM_HEIGHT
-	LightningArc.spawn(get_parent(), from, to, lightning_color(), -1.0, 1.0, 1.5)
+	var color := lightning_color()
+	LightningArc.spawn(get_parent(), from, to, color, 0.22, 1.4, 0.0)
+	LightningArc.spawn(get_parent(), from, to, color.lightened(0.5), 0.12, 0.6, 0.0)
+	Vfx.sparks(get_parent(), to, color, 28, 7.0)
+	Vfx.shockwave(get_parent(), bolt_target.global_position, 1.2, color, 0.25)
+	Vfx.flash_light(get_parent(), to, color, 3.0, 6.0, 0.15)
+	pulse_blade(0.25)
 	SfxLibrary.play(self, &"zap")
 	bolt_fired.emit(bolt_target)
 	bolt_target.hurtbox.receive_hit(info)
@@ -370,9 +433,32 @@ func dash_destination() -> Vector3:
 
 func begin_dash(from: Vector3, to: Vector3) -> void:
 	var height := Vector3.UP * BOLT_ORIGIN_HEIGHT
-	LightningArc.spawn(get_parent(), from + height, to + height, lightning_color(), data.dash_duration)
+	var color := lightning_color()
+	LightningArc.spawn(get_parent(), from + height, to + height, color, data.dash_duration + 0.15, 1.6)
+	LightningArc.spawn(get_parent(), from + Vector3.UP * 0.3, to + Vector3.UP * 0.3, color, data.dash_duration + 0.1, 0.8)
+	Vfx.sparks(get_parent(), from + Vector3.UP * 0.5, color, 20, 5.0)
+	Vfx.shockwave(get_parent(), from, 1.4, color, 0.25)
+	_spawn_afterimages(data.dash_duration)
+	pulse_blade(data.dash_duration + 0.2)
 	SfxLibrary.play(self, &"dash")
 	dash_started.emit(from, to)
+
+
+## Chegada do Passo Relâmpago: estalo no chão.
+func end_dash() -> void:
+	var color := lightning_color()
+	Vfx.sparks(get_parent(), global_position + Vector3.UP * 0.4, color, 24, 6.0)
+	Vfx.shockwave(get_parent(), global_position, 1.8, color, 0.3)
+
+
+## Cópias brilhantes da pose deixadas para trás durante `duration` (velocidade de raio).
+func _spawn_afterimages(duration: float) -> void:
+	var color := lightning_color()
+	body.afterimage(color, AFTERIMAGE_TIME, get_parent())
+	for i: int in range(1, AFTERIMAGES):
+		get_tree().create_timer(duration * float(i) / AFTERIMAGES, false).timeout.connect(func() -> void:
+			if is_inside_tree():
+				body.afterimage(color, AFTERIMAGE_TIME, get_parent()))
 
 
 # --- Defesa e dano ----------------------------------------------------------
@@ -401,9 +487,9 @@ func take_blocked_hit(info: DamageInfo) -> void:
 	info.amount *= (1.0 - data.block_reduction) * (1.0 - damage_reduction)
 	health.take_damage(info.amount)
 	Events.damage_taken.emit(self, info)
-	SfxLibrary.play(self, &"hit")
 	flash(PARRY_FLASH_COLOR)
 	body.play_action(&"block_hit")
+	SfxLibrary.play(self, &"block")
 	if health.is_dead:
 		state_machine.transition_to(&"Dead")
 		died.emit()
@@ -442,7 +528,8 @@ func _take_hit(info: DamageInfo) -> void:
 ## Golpe do combo: o impacto da animação coincide com o fim da preparação + meio da fase ativa.
 func begin_swing(hit_index: int) -> void:
 	var anim := ATTACK_ANIMATIONS[hit_index % ATTACK_ANIMATIONS.size()]
-	body.play_action_hit_at(anim, weapon.hit_windup + weapon.hit_active * 0.5)
+	body.play_action_hit_at(anim, weapon.hit_windup + weapon.hit_active * 0.5, ACTION_SPEED)
+	_trail.emit_for(weapon.hit_windup + weapon.hit_active + 0.08)
 	SfxLibrary.play(self, &"swing")
 
 
@@ -452,15 +539,26 @@ func set_pose_rest() -> void:
 
 func set_pose_guard() -> void:
 	body.play_action(&"parry", PARRY_ANIMATION_SPEED)
+	_trail.emit_for(0.1)
 
 
 ## Dardo de Raio: lança na hora (a animação começa no instante do lançamento).
 func set_pose_cast() -> void:
-	body.play_action_hit_at(&"cast_bolt", data.bolt_cast_time)
+	body.play_action_hit_at(&"cast_bolt", data.bolt_cast_time, ACTION_SPEED)
+	Vfx.charge_crackle(get_parent(), blade_tip, Vector3.ZERO, lightning_color(), data.bolt_cast_time, 0.35, 3)
 
 
 func play_power_cast(power: PowerData) -> void:
-	body.play_action_hit_at(POWER_ANIMATIONS.get(power.kind, &"cast_chain"), power.cast_time)
+	body.play_action_hit_at(POWER_ANIMATIONS.get(power.kind, &"cast_chain"), power.cast_time, ACTION_SPEED)
+	pulse_blade(power.cast_time + 0.3)
+	SfxLibrary.play(self, &"cast")
+	var color := lightning_color()
+	Vfx.charge_crackle(get_parent(), blade_tip, Vector3.ZERO, color, power.cast_time, 0.5, 5)
+	if power.kind == PowerData.Kind.STORM_FURY:
+		Vfx.charge_crackle(get_parent(), self, Vector3.UP * 1.0, color, power.cast_time, 1.2, 8)
+		Vfx.shockwave(get_parent(), global_position, 2.5, color, power.cast_time)
+	elif power.kind == PowerData.Kind.VOLTAIC_BLADE:
+		_trail.emit_for(power.cast_time + 0.15)
 
 
 func set_pose_whiff() -> void:
@@ -472,14 +570,22 @@ func play_hurt() -> void:
 	body.play_action(&"hurt", HURT_ANIMATION_SPEED)
 
 
-## Esquiva: vira o corpo para a direção da esquiva e toca o salto rasante.
+## Esquiva relâmpago: o corpo vira para a direção da esquiva e dispara correndo, deixando
+## imagens residuais e um rastro elétrico no chão (o herói é rápido como um raio).
 func play_dodge(direction: Vector3, duration: float) -> void:
 	var local_direction := global_basis.inverse() * direction
 	if _dodge_turn_tween != null:
 		_dodge_turn_tween.kill()
 	body.rotation.y = atan2(-local_direction.x, -local_direction.z)
-	body.play_action_for(&"dodge", duration)
-	SfxLibrary.play(self, &"whiff")
+	body.play_action(&"sprint", DODGE_ANIMATION_SPEED)
+	var color := lightning_color()
+	body.flash(color, 2.0)
+	var start := global_position + Vector3.UP * 0.25
+	var end := start + direction * data.dodge_distance
+	LightningArc.spawn(get_parent(), start, end, color, duration + 0.1, 0.7)
+	Vfx.sparks(get_parent(), start, color, 14, 4.0)
+	_spawn_afterimages(duration)
+	SfxLibrary.play(self, &"dash")
 
 
 func end_dodge() -> void:

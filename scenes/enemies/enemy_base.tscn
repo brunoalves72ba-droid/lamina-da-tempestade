@@ -17,104 +17,12 @@
 [ext_resource type="PackedScene" path="res://scenes/combat/enemy_projectile.tscn" id="15_projectile"]
 [ext_resource type="Script" path="res://scripts/enemies/states/enemy_stagger.gd" id="16_stagger"]
 [ext_resource type="Script" path="res://scripts/characters/animated_body.gd" id="90_body"]
-[ext_resource type="PackedScene" path="res://assets/characters/xbot/xbot.fbx" id="91_xbot"]
+[ext_resource type="Script" path="res://scripts/enemies/states/enemy_power.gd" id="17_power"]
 [ext_resource type="AnimationLibrary" path="res://assets/characters/animations/combat_library.res" id="92_anims"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
 height = 1.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iron"]
-albedo_color = Color(0.2, 0.2, 0.22, 1)
-metallic = 0.7
-roughness = 0.5
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mail"]
-albedo_color = Color(0.28, 0.28, 0.3, 1)
-metallic = 0.6
-roughness = 0.6
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leather"]
-albedo_color = Color(0.13, 0.09, 0.06, 1)
-roughness = 0.9
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wood"]
-albedo_color = Color(0.3, 0.2, 0.12, 1)
-roughness = 0.85
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
-albedo_color = Color(0.3, 0.24, 0.2, 1)
-roughness = 0.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bone"]
-albedo_color = Color(0.85, 0.8, 0.65, 1)
-roughness = 0.6
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_torso"]
-top_radius = 0.34
-bottom_radius = 0.3
-height = 0.66
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_skirt"]
-material = SubResource("StandardMaterial3D_mail")
-top_radius = 0.3
-bottom_radius = 0.38
-height = 0.34
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_leg"]
-material = SubResource("StandardMaterial3D_leather")
-radius = 0.13
-height = 0.78
-
-[sub_resource type="SphereMesh" id="SphereMesh_shoulder"]
-material = SubResource("StandardMaterial3D_iron")
-radius = 0.17
-height = 0.34
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_arm"]
-material = SubResource("StandardMaterial3D_mail")
-radius = 0.08
-height = 0.62
-
-[sub_resource type="SphereMesh" id="SphereMesh_head"]
-material = SubResource("StandardMaterial3D_skin")
-radius = 0.17
-height = 0.34
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_helmet"]
-material = SubResource("StandardMaterial3D_iron")
-top_radius = 0.17
-bottom_radius = 0.21
-height = 0.26
-
-[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
-material = SubResource("StandardMaterial3D_iron")
-size = Vector3(0.1, 0.03, 1.1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_stock"]
-material = SubResource("StandardMaterial3D_wood")
-size = Vector3(0.07, 0.08, 0.75)
-
-[sub_resource type="BoxMesh" id="BoxMesh_limbs"]
-material = SubResource("StandardMaterial3D_wood")
-size = Vector3(0.85, 0.05, 0.06)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_shield"]
-material = SubResource("StandardMaterial3D_wood")
-top_radius = 0.34
-bottom_radius = 0.34
-height = 0.06
-
-[sub_resource type="SphereMesh" id="SphereMesh_boss"]
-material = SubResource("StandardMaterial3D_iron")
-radius = 0.08
-height = 0.16
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_horn"]
-material = SubResource("StandardMaterial3D_bone")
-top_radius = 0.0
-bottom_radius = 0.05
-height = 0.32
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hurtbox"]
 radius = 0.45
@@ -140,9 +48,7 @@ unique_name_in_owner = true
 [node name="Body" type="Node3D" parent="Model"]
 unique_name_in_owner = true
 script = ExtResource("90_body")
-model_scene = ExtResource("91_xbot")
 library = ExtResource("92_anims")
-body_color = Color(0.42, 0.13, 0.12, 1)
 
 [node name="StunLabel" type="Label3D" parent="."]
 unique_name_in_owner = true
@@ -209,3 +115,6 @@ script = ExtResource("12_dead")
 
 [node name="Stagger" type="Node" parent="StateMachine"]
 script = ExtResource("16_stagger")
+
+[node name="Power" type="Node" parent="StateMachine"]
+script = ExtResource("17_power")

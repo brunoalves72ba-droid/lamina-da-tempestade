@@ -1,6 +1,6 @@
 class_name EnemyProjectile
 extends Node3D
-## Virote do Besteiro (GDD §6.2). Persegue o hurtbox do alvo e acerta exatamente ao fim do voo,
+## Esfera de energia da Conjuradora e da rajada dos chefões (GDD §6.2). Persegue o hurtbox do alvo e acerta exatamente ao fim do voo,
 ## que coincide com o fim do aviso. Pode ser anulado com parry (não atordoa o atirador).
 
 const AIM_HEIGHT: float = 1.0
@@ -11,6 +11,14 @@ var _start: Vector3 = Vector3.ZERO
 var _flight_time: float = 0.35
 var _elapsed: float = 0.0
 var _done: bool = false
+
+
+func set_color(color: Color) -> void:
+	var mesh := $Mesh as MeshInstance3D
+	var material := (mesh.mesh.surface_get_material(0) as StandardMaterial3D).duplicate() as StandardMaterial3D
+	material.albedo_color = color
+	material.emission = color
+	mesh.material_override = material
 
 
 func launch(start: Vector3, target_hurtbox: Hurtbox, info: DamageInfo, flight_time: float) -> void:

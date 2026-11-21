@@ -1,38 +1,40 @@
 [gd_resource type="Resource" script_class="EnemyData" format=3]
 
 [ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/characters/enemies/skeleton_zombie.fbx" id="2_model"]
 
 [resource]
 script = ExtResource("1_script")
-display_name = "Soldado"
+model = ExtResource("2_model")
+display_name = "Esqueleto"
 max_health = 40.0
 attack_damage = 12.0
-body_color = Color(0.42, 0.13, 0.12, 1)
 body_scale = 1.0
 model_variant = 0
+strike_animation = &"enemy_strike"
 gold_reward = 10
 xp_reward = 20
 attack_kind = 0
 strikes_per_attack = 1
-telegraph_time = 0.8
+telegraph_time = 0.7
 strike_active_time = 0.1
-recover_time = 0.6
+recover_time = 0.45
 projectile_flight_time = 0.35
 engage_distance = 2.0
 position_tolerance = 0.5
-move_speed = 2.5
+move_speed = 3.2
 separation_radius = 1.4
-stun_time = 1.5
-spawn_time = 1.0
-aggro_range = 14.0
-run_speed = 3.8
-strafe_speed = 1.3
-strafe_switch_min = 1.5
-strafe_switch_max = 3.5
+aggro_range = 16.0
+run_speed = 4.8
+strafe_speed = 1.8
+strafe_switch_min = 1.2
+strafe_switch_max = 2.8
 attack_reach = 2.1
-acceleration = 10.0
-turn_speed = 8.0
+acceleration = 16.0
+turn_speed = 10.0
 gravity = 24.0
+stun_time = 1.4
 has_poise = false
-stagger_time = 0.35
-knockback_speed = 3.5
+stagger_time = 0.3
+knockback_speed = 4.0
+spawn_time = 0.8

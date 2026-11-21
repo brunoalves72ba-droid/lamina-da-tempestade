@@ -51,12 +51,79 @@ var _charge_normal_style: StyleBox
 var _power_slots: Array[PowerSlot] = []
 
 
+var _boss_panel: VBoxContainer
+var _boss_name: Label
+var _boss_bar: ProgressBar
+var _boss: Enemy
+
+
 func _ready() -> void:
 	_feedback.modulate.a = 0.0
 	_target_panel.visible = false
 	_encounter_label.text = ""
 	_gold_label.text = ""
 	Events.damage_taken.connect(_on_damage_taken)
+	Events.boss_engaged.connect(_on_boss_engaged)
+	_build_boss_panel()
+
+
+## Barra de vida do chefão: larga, no alto e no centro (abaixo do alvo), com o nome dele.
+func _build_boss_panel() -> void:
+	_boss_panel = VBoxContainer.new()
+	_boss_panel.name = "BossPanel"
+	_boss_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boss_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_boss_panel.offset_left = -270.0
+	_boss_panel.offset_right = 270.0
+	_boss_panel.offset_top = 96.0
+	_boss_panel.offset_bottom = 154.0
+	_boss_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_boss_panel.visible = false
+	_boss_name = Label.new()
+	_boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_name.add_theme_font_size_override(&"font_size", 26)
+	_boss_name.add_theme_color_override(&"font_color", Color(1.0, 0.85, 0.55))
+	_boss_name.add_theme_constant_override(&"outline_size", 8)
+	_boss_name.add_theme_color_override(&"font_outline_color", Color.BLACK)
+	_boss_panel.add_child(_boss_name)
+	_boss_bar = ProgressBar.new()
+	_boss_bar.custom_minimum_size = Vector2(0, 18)
+	_boss_bar.show_percentage = false
+	_boss_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.05, 0.03, 0.03, 0.85)
+	background.border_color = Color(0.6, 0.45, 0.25)
+	background.set_border_width_all(2)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.75, 0.1, 0.08)
+	_boss_bar.add_theme_stylebox_override(&"background", background)
+	_boss_bar.add_theme_stylebox_override(&"fill", fill)
+	_boss_panel.add_child(_boss_bar)
+	$Root.add_child(_boss_panel)
+
+
+func _on_boss_engaged(boss: Node3D) -> void:
+	var enemy := boss as Enemy
+	if enemy == null:
+		return
+	if _boss != null and is_instance_valid(_boss):
+		if _boss.health.health_changed.is_connected(_on_boss_health_changed):
+			_boss.health.health_changed.disconnect(_on_boss_health_changed)
+	_boss = enemy
+	_boss_name.text = enemy.data.boss.title
+	_boss_bar.max_value = enemy.health.max_health
+	_boss_bar.value = enemy.health.current_health
+	_boss_panel.visible = true
+	enemy.health.health_changed.connect(_on_boss_health_changed)
+	enemy.tree_exiting.connect(func() -> void: _boss_panel.visible = false)
+	show_feedback(enemy.data.boss.title.to_upper(), Color(1.0, 0.5, 0.3))
+
+
+func _on_boss_health_changed(current: float, maximum: float) -> void:
+	_boss_bar.max_value = maximum
+	_boss_bar.value = current
+	if current <= 0.0:
+		get_tree().create_timer(1.5, false).timeout.connect(func() -> void: _boss_panel.visible = false)
 
 
 func show_gold(amount: int) -> void:

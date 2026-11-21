@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://drkbx86uqqpmq"
-path="res://.godot/imported/dodge.fbx-d82741a6f08b53276dbe2edefdd664dc.scn"
+uid="uid://ck7ajim7wo13x"
+path="res://.godot/imported/skeleton_zombie.fbx-cb50876e7e94417c9961ecf5b875edf3.scn"
 
 [deps]
 
-source_file="res://assets/characters/animations/dodge.fbx"
-dest_files=["res://.godot/imported/dodge.fbx-d82741a6f08b53276dbe2edefdd664dc.scn"]
+source_file="res://assets/characters/enemies/skeleton_zombie.fbx"
+dest_files=["res://.godot/imported/skeleton_zombie.fbx-cb50876e7e94417c9961ecf5b875edf3.scn"]
 
 [params]
 

@@ -80,6 +80,11 @@ func _test_levels() -> void:
 	_check(GameState.add_xp(big) == 2 and GameState.level == 4 and GameState.xp == 5, "XP de sobra sobe vários níveis de uma vez")
 	_check(progression.extra_enemies(1) == 0 and progression.extra_enemies(5) == 2, "nível 5 traz 2 inimigos extras por onda")
 	_check(progression.enemy_health_scale(5) > 1.0, "inimigos ficam mais fortes com o nível do herói")
+	var threat_before := GameState.threat_level()
+	GameState.add_gold(10000)
+	GameState.try_buy(SWORD)
+	GameState.try_buy(ARMOR)
+	_check(GameState.threat_level() > threat_before, "comprar equipamento também fortalece os inimigos (ameaça %.1f → %.1f)" % [threat_before, GameState.threat_level()])
 
 
 func _test_upgrades_applied() -> void:

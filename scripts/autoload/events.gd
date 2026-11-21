@@ -11,6 +11,12 @@ signal entity_died(entity: Node3D)
 ## Último inimigo de uma onda morto por golpe forte (GDD §6.7).
 @warning_ignore("unused_signal")
 signal wave_finisher(enemy: Node3D)
+## Um chefão percebeu o herói (rugido): o HUD mostra a barra de vida dele.
+@warning_ignore("unused_signal")
+signal boss_engaged(boss: Node3D)
+## Pedido de tremor de câmera (impactos de chefão), de 0 a 1.
+@warning_ignore("unused_signal")
+signal shake_requested(amount: float)
 ## Um poder de raio foi solto (kind = PowerData.Kind) na posição do alvo.
 @warning_ignore("unused_signal")
 signal power_unleashed(kind: int, at_position: Vector3, color: Color)

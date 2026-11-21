@@ -25,14 +25,12 @@ O protagonista é um guerreiro **conjurador de raios**: a espada conduz eletrici
 **Dentro**
 - 1 percurso (`trail_01`, ~250 m) com 5 clareiras, 4 fogueiras de checkpoint, patrulhas e um santuário final.
 - Herói conjurador de raios com movimento livre, corrida, esquiva, bloqueio, combo, parry, Dardo de Raio, Passo Relâmpago, 3 poderes e Carga Estática.
-- 3 tipos de inimigo (Soldado, Besteiro, Elite) com perseguição, cerco, reações e os 3 elementos.
-- XP e níveis (persistentes), escala de inimigos pelo nível, loja (Espada, Armadura), save em JSON, menus, pausa com qualidade gráfica, export para Windows.
-
-**Pendente**
-- Corpo humano realista: hoje herói e inimigos usam o manequim X Bot da Mixamo, já animado (ver §15).
+- 3 tipos de inimigo comum (Esqueleto, Vampira, Parasita) e 3 chefões com poderes (Grom, Mutante do Bosque, Guardião do Santuário), com perseguição, cerco, reações e os 3 elementos.
+- Personagens reais da Mixamo (herói Paladino), efeitos visuais de poderes, impactos e desintegração; sons gravados e trilha sonora (exploração, combate, chefão).
+- XP e níveis (persistentes), escala de inimigos pelo nível **e pelo equipamento comprado**, loja (Espada, Armadura), save em JSON, menus, pausa com qualidade gráfica, export para Windows.
 
 **Fora (backlog, ver §13)**
-- Chefe, mais percursos, itens equipáveis, troca de elemento em combate, gamepad, localização.
+- Mais percursos, itens equipáveis, troca de elemento em combate, gamepad, localização.
 
 ## 3. Controles
 
@@ -170,20 +168,31 @@ Ciclo: **Divino > Demoníaco > Heroico > Divino**.
 
 ## 8. Inimigos
 
-| Tipo | HP | Dano do golpe | Comportamento | Ouro |
+| Tipo (dados) | Modelo Mixamo | HP | Dano | Comportamento | Ouro / XP |
+|---|---|---|---|---|---|
+| Esqueleto (`soldier`) | Skeletonzombie | 40 | 12 | corpo a corpo com espada e escudo, 1 golpe por token; é o que aparece de extra nas ondas | 10 / 20 |
+| Vampira (`crossbowman`) | Vampire | 30 | 9 | mantém distância (~8 m), lança esfera de sangue (aviso de 0,7 s) | 12 / 25 |
+| Parasita (`elite`) | Parasite | 150 | 25 | garras, golpe duplo (dois avisos seguidos), postura | 40 / 90 |
+
+- Ciclo de ataque: aviso **0,7 s** → golpe ativo **0,1 s** → recuperação **0,45 s** (Vampira e Parasita: **0,6 s**) → guarda.
+- Surgem em **0,8 s**; correm a ~4,5–4,8 m/s e circulam a ~1,8 m/s.
+- Morte: animação de queda e, depois de ~1 s, o corpo **se desintegra** em brasas e cinzas na cor do elemento.
+
+### 8.1 Chefões (`data/enemies/boss_*.tres`, poderes em `BossData`)
+
+| Chefão | Modelo | Onde | HP | Poderes |
 |---|---|---|---|---|
-| Soldado | 40 | 12 | corpo a corpo, 1 golpe por token | 10 |
-| Besteiro | 30 | 8 | mantém distância (~8 m), dispara virote (aviso de 0,8 s) | 12 |
-| Elite | 150 | 25 | corpo a corpo; às vezes golpe duplo (dois avisos seguidos, cada um defendível) | 40 |
+| Grom, o Quebra-Pontes | Warrok | última onda da clareira 3 (Ponte de Pedra) | 520 | Golpe no chão |
+| Mutante do Bosque | Mutant (1,35×) | última onda da clareira 4 (Bosque Morto), com 1 Esqueleto | 680 | Salto e Golpe no chão; golpe duplo |
+| Guardião do Santuário | Maw | última onda da clareira 5 (Portão do Santuário) | 950 | Rajada, Golpe no chão e Salto |
 
-- Ciclo de ataque: aviso **0,8 s** → golpe ativo **0,1 s** → recuperação **0,6 s** (Besteiro e Elite: **0,8 s**) → guarda.
-- Todos surgem em **1,0 s** (sem atacar nem receber dano).
-
-| Tipo | Distância de guarda | Velocidade | Observação |
-|---|---|---|---|
-| Soldado | 2,0 m | 2,5 m/s | |
-| Besteiro | 8,0 m | 1,5 m/s | o virote sai 0,35 s antes do impacto e chega quando o anel fecha |
-| Elite | 2,2 m | 2,0 m/s | modelo 1,3× maior; golpe duplo: 2º aviso logo após o 1º impacto |
+- **Rugido de entrada:** ao perceber o herói, o chefão ruge (onda de choque, tremor) e aparece a **barra de vida do chefão** no alto da tela; a música muda para o tema de chefão.
+- **Poderes** (a cada 5,5–7 s, no lugar de um golpe normal; não podem ser aparados): círculo vermelho no chão que se enche até o impacto.
+  - *Golpe no chão:* bate com as duas mãos; onda de choque de 4,2–5 m em volta dele. Saia do círculo ou esquive na hora do impacto (o bloqueio reduz o dano).
+  - *Salto:* agacha, salta e cai onde o herói estava (círculo de ~3,6 m).
+  - *Rajada:* 6 esferas de energia seguidas; cada uma pode ser aparada como o projétil da Vampira.
+- **Fúria:** abaixo de 50% de vida ruge de novo, ganha contorno brilhante e usa poderes 40% mais rápido.
+- Golpes normais continuam defendíveis por parry (atordoa o chefão por ~1,2 s). Chefões têm postura (não cambaleiam).
 - Atordoado (após parry) recebe dano normalmente e não ataca; ao fim do atordoamento devolve o token.
 - Cada inimigo tem `EnemyData` (status) + elemento definido na onda.
 
@@ -231,6 +240,7 @@ Dois upgrades lineares, **5 níveis** cada:
 | 5 | 400 | 20 | 200 / 15% |
 
 - A loja aparece após a tela de resultado e também é acessível pelo menu principal.
+- **Os inimigos acompanham o herói:** nível de ameaça = nível do herói + 0,5 × níveis de equipamento comprados (`GameState.threat_level()`). Cada nível de ameaça acima de 1 dá +6% de vida e +4% de dano aos inimigos e +0,5 inimigo extra por onda (máx. 6).
 - Ouro total necessário para maximizar tudo: **2.000** (≈ 8–10 partidas vitoriosas — ajustar jogando).
 
 ## 11. Interface e áudio
@@ -239,7 +249,7 @@ Dois upgrades lineares, **5 níveis** cada:
 
 **Telas:** menu principal (Jogar, Loja, Sair) · escolha de elemento · pausa (Continuar, Som on/off, Sair para o menu) · resultado · loja.
 
-**Áudio:** placeholders curtos. Prioridade: som do aviso de ataque (essencial para a mecânica), parry certo (estalo elétrico), impacto de golpe normal/forte, zumbido de Carga cheia, trovão da Fúria da Tempestade, morte de inimigo, finisher.
+**Áudio:** sons gravados com variações sorteadas e leve variação de tom (`SfxLibrary`), e trilha sonora com transição suave (autoload `Music`): exploração (menu e trilha), combate (clareira ativa) e chefão (introdução + loop). Créditos e licenças em §16.
 
 **Save:** `user://save.json` com `version`, ouro, níveis de upgrade e último elemento escolhido. Salva ao sair da loja e ao fim de cada fase.
 
@@ -296,7 +306,11 @@ Dois upgrades lineares, **5 níveis** cada:
 - [x] Percurso `trail_01`: terreno gerado, texturas fotográficas, vegetação/rochas reais, 5 clareiras com barreira, 4 fogueiras, patrulhas, santuário
 - [x] Iluminação noturna realista (HDRI, lua, neblina volumétrica, SSAO) com presets de qualidade
 - [x] Personagens animados com animações da Mixamo (29 movimentos escolhidos de 107), espada/escudo/besta presos aos ossos
-- [ ] Trocar o manequim X Bot por um personagem humano da Mixamo (mesmo esqueleto, mesmas animações)
+- [x] Personagens reais da Mixamo: herói Paladino (espada e escudo do próprio modelo), 3 inimigos comuns e 3 chefões
+- [x] Chefões com poderes (golpe no chão, salto, rajada), rugido, fúria e barra de vida
+- [x] Efeitos dos poderes e de destruição: rastro da espada, imagens residuais na esquiva/Passo Relâmpago, raios do céu, cortes elétricos, ondas de choque, faíscas, marcas no chão, desintegração
+- [x] Ritmo de ação mais rápido (herói 5,6 m/s / 8,6 m/s correndo, esquiva de 0,3 s, golpes e magias 1,4× mais rápidos, inimigos mais ágeis)
+- [x] Sons e músicas reais (CC0), inimigos escalam também com o equipamento comprado
 - **Aceite:** `tests/auto_trail_test.tscn` — piloto automático percorre a trilha inteira, vence as 5 clareiras, acende as 4 fogueiras, sobe de nível e chega ao santuário (~110 s de jogo).
 
 ## 13. Backlog pós-MVP
@@ -311,23 +325,48 @@ Upgrade dos poderes de raio (ex.: +dano elétrico, +1 salto na Corrente, Carga i
 
 ## 15. Personagens animados (Mixamo)
 
-Fonte: pacotes "Pro Sword and Shield Pack" e "Pro Magic Pack" da Mixamo (com o manequim X Bot). Das 107 animações, 29 foram escolhidas medindo duração, deslocamento e o instante do golpe (pico de velocidade da mão):
+Personagens (pasta original `Documentos\Amimacoes`, todos com o esqueleto `mixamorig_*`):
+
+| Papel | Modelo | Arquivo no projeto |
+|---|---|---|
+| Herói | Paladin W/ Prop J Nordstrom (espada e escudo fazem parte do modelo) | `assets/characters/hero/paladin.fbx` |
+| Esqueleto / Vampira / Parasita | Skeletonzombie T Avelange / Vampire A Lusth / Parasite L Starkie | `assets/characters/enemies/` |
+| Chefões | Warrok W Kurniawan / Mutant / Maw J Laygo | `assets/characters/bosses/` |
+
+Não usados: Ch05 (114 MB, 48 mil triângulos — pesado demais para a GPU integrada), Demon e Pumpkinhulk (ficam para futuros chefões).
+
+Animações: 32 escolhidas dos pacotes "Pro Sword and Shield" e "Pro Magic" medindo duração, deslocamento e o instante do golpe (pico de velocidade da mão):
 
 | Uso | Animação (arquivo original) |
 |---|---|
 | Parado / andar / correr / costas | sword and shield idle, walk, run, walk (2), run (2) |
-| Sprint (Shift) | Standing Sprint Forward (magia) |
+| Sprint (Shift) e esquiva relâmpago | Standing Sprint Forward (magia; na esquiva, 1,8× com imagens residuais) |
 | Andar/correr de lado (travado) | strafe (2)/strafe (esq./dir.), strafe (3)/(4) correndo |
 | Combo 1-2-3 | slash → attack (4) → attack (3) (golpe forte) |
 | Parry / bloqueio / golpe no escudo | block, block idle, block (2) |
 | Atingido / morte | impact (3), death |
-| Esquiva | jump (salto rasante; os pacotes não têm rolamento) |
 | Dardo de Raio / Corrente / Fúria | 1H Magic Attack 02, 1H Cast Spell 01, 2H Magic Area Attack 01 |
 | Lâmina Voltaica | slash (4) |
-| Inimigo: golpe / golpe da Elite / tiro | slash, attack (2), 1H Magic Attack 01 (sincronizados com o aviso de 0,8 s) |
+| Inimigo: golpe / golpe duplo / magia | slash, attack (2), 1H Magic Attack 01 (sincronizados com o aviso) |
 | Inimigo: surgir / atordoado / cambalear | Crouch To Standing Idle, React Large From Front, impact (2) |
+| Chefão: golpe no chão / rugido / rajada / salto | sword and shield casting, sword and shield power up, 2H Magic Attack 01, Standing Jump |
 
-- O deslocamento das animações é removido (o código move os personagens); a velocidade de andar/correr é ajustada à velocidade real para os pés não deslizarem.
-- Equipamentos presos aos ossos: espada (lâmina brilha na cor do elemento), escudo realista do Poly Haven (herói), escudo redondo (Soldado/Elite), besta (Besteiro), chifres (Elite). Os inimigos têm contorno na cor do elemento e corpo na cor do tipo.
-- **Próximo passo:** baixar um personagem humano da Mixamo (ex.: "Paladin W/ Prop J Nordstrom", FBX, T-pose) para `assets/characters/` e apontar o `model_scene` do `AnimatedBody` para ele: as mesmas animações funcionam.
-- Desempenho medido (Iris Xe, preset Baixo): ~55 FPS em combate com 3 inimigos animados.
+- O deslocamento das animações é removido (o código move os personagens); a velocidade de andar/correr é ajustada à velocidade real para os pés não deslizarem. Golpes e magias do herói correm 1,4× depois do impacto.
+- No arquivo do Paladino os nomes das malhas vêm trocados: a espada é a malha `Paladin_J_Nordstrom` (a base e a ponta da lâmina são calculadas da própria malha).
+- O Esqueleto carrega espada e escudo redondo presos aos ossos; os outros lutam com garras e magia. Inimigos têm contorno na cor do elemento; o herói tem um contorno suave para não sumir na noite.
+- Desempenho medido (Iris Xe, preset Baixo, janela 1280×720): mediana ~52 FPS no percurso completo com chefões e efeitos (mín. ~35 no carregamento).
+
+## 16. Créditos de áudio (todos CC0 — domínio público, OpenGameArt.org)
+
+| Uso | Obra (autor) |
+|---|---|
+| Lâminas, metal, pedras, moedas, rugidos e mortes de criaturas | "80 CC0 RPG SFX" (rubberduck) |
+| Rosnados, gemidos, rugidos | "80 CC0 creature SFX" (rubberduck) |
+| Choques elétricos, impacto no chão, esquiva, carga, explosão | "Electricity Game Sound Pack" (faxcorp) |
+| Magia elétrica | "Spell sounds" (HaelDB; CC0 ou OGA-BY 3.0, usado como CC0) |
+| Trovão | "Rain + Long Thunder" (WuxiaScrub) |
+| Música de exploração e menu | "Dark Shrine Loop" (qubodup, remix de yd) |
+| Música de combate | "Determined Pursuit (epic orchestra loop)" (Emma_MA) |
+| Música de chefão | "Boss Battle #2 [Symphonic Metal]" (nene) |
+
+Os arquivos foram convertidos para OGG e os longos foram cortados (`assets/audio/sfx/`, `assets/audio/music/`).

@@ -99,7 +99,7 @@ func _ready() -> void:
 
 	spawner.target = player
 	spawner.progression = GameState.progression
-	spawner.scaling_level = GameState.level
+	spawner.scaling_level = GameState.threat_level()
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
 	GameState.leveled_up.connect(_on_leveled_up)
 	player.died.connect(_on_player_died)
@@ -108,6 +108,7 @@ func _ready() -> void:
 	_place_player(_respawn_point, route_direction(1.5))
 	_hud.bind_player(player)
 	_hud.bind_progression()
+	Music.play_track(&"explore")
 	_hud.show_gold(run_gold)
 	GraphicsSettings.apply(get_viewport(), _environment.environment, GameState.graphics_quality)
 	_spawn_patrols()
@@ -205,10 +206,11 @@ func _start_zone(zone: CombatZone) -> void:
 	var generation := _zone_generation
 	var index := zones.find(zone)
 	zone.activate()
-	spawner.scaling_level = GameState.level
+	spawner.scaling_level = GameState.threat_level()
 	_hud.show_encounter_text("Clareira %d / %d — %s" % [index + 1, zones.size(), zone.display_name])
 	_hud.show_feedback(zone.display_name.to_upper(), TITLE_COLOR)
 	zone_started.emit(index, zones.size())
+	Music.play_track(&"combat")
 	for wave: WaveData in zone.waves:
 		await spawner.run_wave(wave, zone)
 		if generation != _zone_generation:
@@ -217,6 +219,7 @@ func _start_zone(zone: CombatZone) -> void:
 	_active_zone = null
 	player.heal(player.health.max_health * zone_clear_heal_fraction)
 	_hud.show_feedback("CLAREIRA VENCIDA", TITLE_COLOR)
+	Music.play_track(&"explore")
 	_hud.show_encounter_text("Siga a trilha até o santuário")
 	zone_cleared.emit(index)
 
@@ -248,14 +251,17 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 func _on_enemy_killed(enemy: Enemy) -> void:
 	run_gold += enemy.data.gold_reward
 	_hud.show_gold(run_gold)
+	SfxLibrary.play(player, &"coins")
+	if enemy.is_boss() and _active_zone != null:
+		Music.play_track(&"combat")
 	GameState.add_xp(enemy.data.xp_reward)
 
 
 func _on_leveled_up(level: int) -> void:
 	_apply_player_stats()
-	spawner.scaling_level = level
+	spawner.scaling_level = GameState.threat_level()
 	_hud.show_feedback("NÍVEL %d!" % level, LEVEL_UP_COLOR)
-	SfxLibrary.play(player, &"charge_full")
+	SfxLibrary.play(player, &"level_up")
 	var color := player.lightning_color()
 	for i: int in 6:
 		var angle := TAU * i / 6.0

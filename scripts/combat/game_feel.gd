@@ -4,6 +4,11 @@ extends Node
 ## hitstop nos golpes, Descarga visual no parry, tremor de câmera e câmera lenta no finisher.
 ## Funciona com qualquer Camera3D ativa (usa h_offset/v_offset e fov).
 
+## Altura do peito (onde saem as faíscas do impacto), em metros, para escala 1.
+const IMPACT_HEIGHT: float = 1.2
+const PLAYER_HIT_COLOR := Color(1.0, 0.35, 0.2)
+const BLOOD_COLOR := Color(0.35, 0.02, 0.02)
+
 @export var data: GameFeelData
 
 var _trauma: float = 0.0
@@ -18,6 +23,7 @@ func _ready() -> void:
 	Events.parry_succeeded.connect(_on_parry_succeeded)
 	Events.wave_finisher.connect(_on_wave_finisher)
 	Events.power_unleashed.connect(_on_power_unleashed)
+	Events.shake_requested.connect(add_shake)
 
 
 func _exit_tree() -> void:
@@ -40,12 +46,23 @@ func add_shake(amount: float) -> void:
 
 
 func _on_damage_taken(target: Node3D, info: DamageInfo) -> void:
+	var chest := target.global_position + Vector3.UP * IMPACT_HEIGHT * target.scale.y
 	if target is Player:
 		add_shake(data.shake_player_hurt)
 		Hitstop.apply(get_tree(), data.hitstop_time_scale, data.hitstop_normal)
+		Vfx.sparks(target.get_parent(), chest, PLAYER_HIT_COLOR, 16, 4.0)
 		return
 	if info.source is Player:
 		var heavy := info.is_heavy
+		var hero := info.source as Player
+		var color := hero.lightning_color()
+		var enemy := target as Enemy
+		if enemy != null:
+			chest = enemy.global_position + Vector3.UP * IMPACT_HEIGHT * enemy.data.body_scale
+		Vfx.sparks(target.get_parent(), chest, color, 26 if heavy else 14, 7.0 if heavy else 5.0)
+		Vfx.sparks(target.get_parent(), chest, BLOOD_COLOR, 8, 3.0, 0.4, -14.0)
+		if heavy:
+			Vfx.shockwave(target.get_parent(), target.global_position, 1.6, color, 0.25)
 		Hitstop.apply(get_tree(), data.hitstop_time_scale, data.hitstop_heavy if heavy else data.hitstop_normal)
 		if heavy:
 			add_shake(data.shake_heavy)

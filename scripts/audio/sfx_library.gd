@@ -1,27 +1,36 @@
 class_name SfxLibrary
 extends RefCounted
-## Sons placeholder gerados por síntese (sem arquivos de áudio). Troca por áudio real no M4.
+## Efeitos sonoros gravados (CC0, créditos no GDD §16). Cada nome tem variações sorteadas e um leve
+## desvio de tom, para golpes repetidos não soarem iguais. Arquivos em assets/audio/sfx/.
 
-const MIX_RATE: int = 22050
-const ATTACK_SHARPNESS: float = 50.0
-## nome -> [freq. inicial (Hz), freq. final (Hz), duração (s), volume, mistura de ruído]
-const PRESETS: Dictionary = {
-	&"swing": [320.0, 120.0, 0.12, 0.22, 0.85],
-	&"hit": [190.0, 70.0, 0.14, 0.6, 0.35],
-	&"hit_heavy": [140.0, 45.0, 0.25, 0.8, 0.4],
-	&"telegraph": [620.0, 980.0, 0.2, 0.45, 0.0],
-	&"parry": [2200.0, 500.0, 0.3, 0.6, 0.45],
-	&"player_hurt": [240.0, 90.0, 0.22, 0.6, 0.5],
-	&"whiff": [500.0, 350.0, 0.08, 0.2, 0.6],
-	&"zap": [3200.0, 700.0, 0.18, 0.5, 0.7],
-	&"dash": [900.0, 2400.0, 0.2, 0.3, 0.6],
-	&"bolt_fire": [400.0, 260.0, 0.1, 0.35, 0.7],
-	&"thunder": [90.0, 30.0, 0.9, 0.9, 0.85],
-	&"charge_full": [500.0, 1500.0, 0.35, 0.35, 0.3],
-	&"interrupt": [1400.0, 300.0, 0.2, 0.5, 0.5],
+const DIR := "res://assets/audio/sfx/"
+const PITCH_VARIATION: float = 0.08
+## nome -> [arquivos (sem .ogg), volume em dB]
+const SOUNDS: Dictionary = {
+	&"swing": [["blade_01", "blade_02", "blade_03"], -6.0],
+	&"hit": [["creature_hurt_01", "creature_hurt_02", "creature_monster_01", "creature_monster_02"], -4.0],
+	&"hit_heavy": [["ground_hit", "creature_hurt_03"], 0.0],
+	&"telegraph": [["creature_grunt_01", "creature_grunt_02", "creature_grunt_03", "creature_grunt_04"], -3.0],
+	&"parry": [["metal_01", "metal_02", "metal_03"], 0.0],
+	&"block": [["shield_block"], -2.0],
+	&"player_hurt": [["creature_hurt_03", "stones_01"], -2.0],
+	&"whiff": [["blade_02"], -10.0],
+	&"zap": [["zap", "electric_impact"], -3.0],
+	&"dash": [["electric_dash"], -4.0],
+	&"bolt_fire": [["spell_01", "spell_02"], -4.0],
+	&"thunder": [["thunder"], 2.0],
+	&"charge_full": [["charge"], -6.0],
+	&"cast": [["zap_cast"], -6.0],
+	&"interrupt": [["metal_03", "zap_heavy"], -2.0],
+	&"roar": [["creature_roar_02", "creature_roar_03", "creature_troll_01"], 2.0],
+	&"enemy_die": [["creature_die_01", "creature_monster_03", "creature_monster_05"], -3.0],
+	&"disintegrate": [["boom"], -8.0],
+	&"impact_heavy": [["stones_02", "ground_hit"], 2.0],
+	&"level_up": [["level_up"], -3.0],
+	&"coins": [["item_coins_01"], -6.0],
 }
 
-static var _cache: Dictionary[StringName, AudioStreamWAV] = {}
+static var _cache: Dictionary[String, AudioStream] = {}
 
 
 ## Toca um som "dispara e esquece" como filho de `parent`.
@@ -31,36 +40,20 @@ static func play(parent: Node, sfx_name: StringName) -> void:
 		return
 	var player := AudioStreamPlayer.new()
 	player.stream = stream
+	player.volume_db = SOUNDS[sfx_name][1]
+	player.pitch_scale = 1.0 + randf_range(-PITCH_VARIATION, PITCH_VARIATION)
 	parent.add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()
 
 
-static func get_stream(sfx_name: StringName) -> AudioStreamWAV:
-	if _cache.has(sfx_name):
-		return _cache[sfx_name]
-	var preset: Array = PRESETS.get(sfx_name, [])
-	if preset.is_empty():
+## Uma das variações do som (sorteada); null se o nome não existir.
+static func get_stream(sfx_name: StringName) -> AudioStream:
+	var entry: Array = SOUNDS.get(sfx_name, [])
+	if entry.is_empty():
 		push_warning("SFX desconhecido: %s" % sfx_name)
 		return null
-	var stream := _synth(preset[0], preset[1], preset[2], preset[3], preset[4])
-	_cache[sfx_name] = stream
-	return stream
-
-
-static func _synth(freq_start: float, freq_end: float, duration: float, volume: float, noise: float) -> AudioStreamWAV:
-	var sample_count := int(duration * MIX_RATE)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	var phase := 0.0
-	for i: int in sample_count:
-		var t := float(i) / float(sample_count)
-		phase += TAU * lerpf(freq_start, freq_end, t) / MIX_RATE
-		var envelope := minf(1.0, t * ATTACK_SHARPNESS) * pow(1.0 - t, 2.0)
-		var sample := sin(phase) * (1.0 - noise) + randf_range(-1.0, 1.0) * noise
-		data.encode_s16(i * 2, int(clampf(sample * envelope * volume, -1.0, 1.0) * 32767.0))
-	var wav := AudioStreamWAV.new()
-	wav.format = AudioStreamWAV.FORMAT_16_BITS
-	wav.mix_rate = MIX_RATE
-	wav.data = data
-	return wav
+	var file: String = (entry[0] as Array).pick_random()
+	if not _cache.has(file):
+		_cache[file] = load(DIR + file + ".ogg") as AudioStream
+	return _cache[file]

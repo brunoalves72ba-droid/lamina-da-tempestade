@@ -1,7 +1,8 @@
 class_name WaveSpawner
 extends Node
 ## Cria os inimigos de uma onda nos pontos do Encounter e espera todos morrerem (GDD §9).
-## Escala com o nível do herói: inimigos extras por onda e vida/dano maiores (ProgressionData).
+## Escala com o nível de ameaça (nível do herói + equipamento): inimigos extras por onda e
+## vida/dano maiores (ProgressionData).
 
 signal enemy_spawned(enemy: Enemy)
 signal wave_cleared
@@ -10,8 +11,8 @@ signal wave_cleared
 @export var token_manager: AttackTokenManager
 
 var target: Node3D
-## Nível usado para escalar (a fase define com o nível do herói; 1 = sem escala).
-var scaling_level: int = 1
+## Nível de ameaça usado para escalar (a fase define com GameState.threat_level(); 1 = sem escala).
+var scaling_level: float = 1.0
 var progression: ProgressionData
 
 var _alive: int = 0

@@ -23,6 +23,7 @@ func physics_update(delta: float) -> void:
 	player.global_position = _from.lerp(_to, eased)
 	if t < 1.0:
 		return
+	player.end_dash()
 	if player.target == null or not player.is_target_in_melee_range():
 		machine.transition_to(&"Idle")
 	elif _then_power >= 0:

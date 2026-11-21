@@ -8,6 +8,8 @@ const CROSSBOW_DATA: EnemyData = preload("res://data/enemies/crossbowman.tres")
 const CROSSBOW_POSITION := Vector3(3.0, 0.0, -8.0)
 const SOLDIER_DATA: EnemyData = preload("res://data/enemies/soldier.tres")
 const ELITE_DATA: EnemyData = preload("res://data/enemies/elite.tres")
+const BOSS_DATA: EnemyData = preload("res://data/enemies/boss_warrok.tres")
+const LEAP_BOSS_DATA: EnemyData = preload("res://data/enemies/boss_mutant.tres")
 ## Pausa maior que a janela do combo, para cada ataque começar do 1º golpe.
 const COMBO_BREAK_TIME: float = 1.0
 ## Aperta o parry este tempo antes do impacto (dentro da janela de 0,25 s).
@@ -53,10 +55,57 @@ func _ready() -> void:
 	await _test_storm_fury()
 	await _test_elite_double_strike()
 	await _test_free_movement()
+	await _test_boss_powers()
 	await _test_combo_and_kill()
 
 	print("\n%s — %d falha(s)" % ["COMBATE OK" if _failures == 0 else "COMBATE FALHOU", _failures])
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+## Chefão: ruge ao perceber o herói (barra de vida), golpe no chão acerta quem está no círculo
+## e não acerta quem esquiva; salto cai onde o herói estava.
+func _test_boss_powers() -> void:
+	print("
+[Chefões: rugido, golpe no chão e salto]")
+	_sandbox.reset()
+	_enemy.auto_attack = false
+	var engaged: Array[Node3D] = []
+	var on_engaged := func(boss: Node3D) -> void: engaged.append(boss)
+	Events.boss_engaged.connect(on_engaged)
+	var boss := _sandbox.spawn_extra_enemy(BOSS_DATA, Vector3(0.0, 0.0, -4.5))
+	boss.auto_attack = false
+	await _wait(BOSS_DATA.spawn_time + BossBrain.ROAR_TIME + 0.6)
+	_check(engaged.has(boss), "chefão ruge e aparece a barra de vida")
+	_check(boss.boss_brain != null and boss.data.has_poise, "chefão tem poderes e postura")
+	var before := _player.health.current_health
+	boss.state_machine.transition_to(&"Power", {"power": BossData.Power.SLAM})
+	await _wait(BOSS_DATA.boss.slam_windup + 0.2)
+	_check(_player.health.current_health < before, "golpe no chão acerta o herói dentro do círculo")
+	await _wait(1.5)
+	_player.reset_state()
+	before = _player.health.current_health
+	boss.state_machine.transition_to(&"Power", {"power": BossData.Power.SLAM})
+	await _wait(BOSS_DATA.boss.slam_windup - 0.12)
+	_player.use_scripted_input = true
+	_player.scripted_move_input = Vector2(0.0, 1.0)
+	_player.input_buffer.press(&"dodge")
+	await _wait(0.4)
+	_player.scripted_move_input = Vector2.ZERO
+	_player.use_scripted_input = false
+	_check(is_equal_approx(_player.health.current_health, before), "esquivar na hora do impacto evita o dano")
+	await _wait(1.5)
+	boss.queue_free()
+	var leaper := _sandbox.spawn_extra_enemy(LEAP_BOSS_DATA, Vector3(6.0, 0.0, -8.0))
+	leaper.auto_attack = false
+	await _wait(LEAP_BOSS_DATA.spawn_time + BossBrain.ROAR_TIME + 0.6)
+	var target_spot := _player.global_position
+	leaper.state_machine.transition_to(&"Power", {"power": BossData.Power.LEAP})
+	await _wait(LEAP_BOSS_DATA.boss.leap_windup + LEAP_BOSS_DATA.boss.leap_air_time + 0.2)
+	var landing := Vector2(leaper.global_position.x - target_spot.x, leaper.global_position.z - target_spot.z).length()
+	_check(landing < 2.0, "salto cai onde o herói estava (%.2f m)" % landing)
+	Events.boss_engaged.disconnect(on_engaged)
+	_sandbox.reset()
+	_enemy.auto_attack = true
 
 
 func _test_perfect_parry_and_counter() -> void:

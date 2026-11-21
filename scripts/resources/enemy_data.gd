@@ -3,15 +3,22 @@ extends Resource
 ## Status, tempos e comportamento de um tipo de inimigo (GDD §8). Valores em data/enemies/*.tres.
 
 enum AttackKind { MELEE, RANGED }
-## Visual do modelo: Soldado (espada e escudo), Besteiro (besta), Elite (espada, escudo e chifres).
-enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE }
+## Papel do inimigo: Soldado (espada e escudo; é o que aparece de extra nas ondas),
+## Conjuradora (ataque à distância), Elite (garras, dois golpes), Chefão (poderes do BossData).
+enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE, BOSS }
 
 @export var display_name: String = "Soldado"
 @export var max_health: float = 40.0
 @export var attack_damage: float = 12.0
-@export var body_color: Color = Color(0.42, 0.13, 0.12)
+## Personagem da Mixamo (texturizado, esqueleto `mixamorig_*`).
+@export var model: PackedScene
+## Escala do modelo; colisão, área de dano e alcance do golpe acompanham.
 @export var body_scale: float = 1.0
 @export var model_variant: ModelVariant = ModelVariant.SOLDIER
+## Animação do golpe corpo a corpo (biblioteca de combate).
+@export var strike_animation: StringName = &"enemy_strike"
+## Poderes de chefão; vazio para inimigos comuns.
+@export var boss: BossData
 ## Ouro e experiência ganhos ao derrotar (GDD §8).
 @export var gold_reward: int = 10
 @export var xp_reward: int = 20
@@ -26,6 +33,7 @@ enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE }
 @export var strikes_per_attack: int = 1
 ## Só para RANGED: o virote sai este tempo antes do impacto e chega quando o aviso termina.
 @export var projectile_flight_time: float = 0.35
+@export var projectile_color: Color = Color(1.0, 0.45, 0.1)
 
 @export_group("Movimento")
 ## Distância que o inimigo mantém do herói enquanto está em guarda.

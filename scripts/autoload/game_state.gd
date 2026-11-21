@@ -84,6 +84,19 @@ func level_of(upgrade: UpgradeData) -> int:
 	return _upgrade_levels.get(upgrade.id, 0)
 
 
+## Soma dos níveis de todos os equipamentos comprados.
+func equipment_levels() -> int:
+	var total := 0
+	for id: StringName in _upgrade_levels:
+		total += _upgrade_levels[id]
+	return total
+
+
+## Nível de ameaça dos inimigos: sobe com o nível do herói e com o equipamento comprado.
+func threat_level() -> float:
+	return progression.threat_level(level, equipment_levels())
+
+
 func can_buy(upgrade: UpgradeData) -> bool:
 	var cost := upgrade.cost_for_next(level_of(upgrade))
 	return cost >= 0 and gold >= cost

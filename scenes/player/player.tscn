@@ -27,7 +27,7 @@
 [ext_resource type="Script" path="res://scripts/player/states/player_dodge.gd" id="26_dodge"]
 [ext_resource type="Script" path="res://scripts/player/states/player_block.gd" id="27_block"]
 [ext_resource type="Script" path="res://scripts/characters/animated_body.gd" id="90_body"]
-[ext_resource type="PackedScene" path="res://assets/characters/xbot/xbot.fbx" id="91_xbot"]
+[ext_resource type="PackedScene" path="res://assets/characters/hero/paladin.fbx" id="91_xbot"]
 [ext_resource type="AnimationLibrary" path="res://assets/characters/animations/combat_library.res" id="92_anims"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
@@ -148,7 +148,6 @@ unique_name_in_owner = true
 script = ExtResource("90_body")
 model_scene = ExtResource("91_xbot")
 library = ExtResource("92_anims")
-body_color = Color(0.3, 0.4, 0.55, 1)
 
 [node name="TargetMarker" type="MeshInstance3D" parent="."]
 top_level = true

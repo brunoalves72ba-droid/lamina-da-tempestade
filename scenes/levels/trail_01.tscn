@@ -61,6 +61,9 @@
 [ext_resource type="Resource" path="res://data/waves/trail_z4.tres" id="59_r"]
 [ext_resource type="Resource" path="res://data/waves/trail_z5a.tres" id="60_r"]
 [ext_resource type="Resource" path="res://data/waves/trail_z5b.tres" id="61_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z3_boss.tres" id="62_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z4_boss.tres" id="63_r"]
+[ext_resource type="Resource" path="res://data/waves/trail_z5_boss.tres" id="64_r"]
 
 [sub_resource type="PanoramaSkyMaterial" id="Sky_mat"]
 panorama = ExtResource("28_r")
@@ -328,19 +331,19 @@ route_progress = 82.0
 
 [node name="Zone3" type="Node3D" parent="Zones"]
 script = ExtResource("15_r")
-waves = Array[ExtResource("16_r")]([ExtResource("57_r"), ExtResource("58_r")])
+waves = Array[ExtResource("16_r")]([ExtResource("57_r"), ExtResource("58_r"), ExtResource("62_r")])
 display_name = "Ponte de Pedra"
 route_progress = 130.0
 
 [node name="Zone4" type="Node3D" parent="Zones"]
 script = ExtResource("15_r")
-waves = Array[ExtResource("16_r")]([ExtResource("59_r")])
+waves = Array[ExtResource("16_r")]([ExtResource("59_r"), ExtResource("63_r")])
 display_name = "Bosque Morto"
 route_progress = 178.0
 
 [node name="Zone5" type="Node3D" parent="Zones"]
 script = ExtResource("15_r")
-waves = Array[ExtResource("16_r")]([ExtResource("60_r"), ExtResource("61_r")])
+waves = Array[ExtResource("16_r")]([ExtResource("60_r"), ExtResource("61_r"), ExtResource("64_r")])
 display_name = "Portão do Santuário"
 route_progress = 222.0
 
