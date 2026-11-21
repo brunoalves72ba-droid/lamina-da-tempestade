@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SwordItem" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/sword_item.gd" id="1_sword"]
+
+[resource]
+script = ExtResource("1_sword")
+id = &"paladin"
+display_name = "Espada do Paladino"
+description = "A lâmina de juramento da Ordem do Grifo. Simples, confiável."
+length = 1.0
+roll_degrees = 0.0
+attack = 10.0
+price = 0
+threat = 0.0
+tier = 0

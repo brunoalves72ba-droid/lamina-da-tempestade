@@ -27,6 +27,7 @@ func _ready() -> void:
 	column.add_child(_graphics_button)
 	_sound_button = MenuKit.button("", _toggle_sound)
 	column.add_child(_sound_button)
+	column.add_child(MenuKit.button("Configurações", _open_settings))
 	column.add_child(MenuKit.button("Recomeçar a fase", _restart))
 	column.add_child(MenuKit.button("Sair para o menu", _go_to_menu))
 	_refresh_texts()
@@ -62,6 +63,15 @@ func _refresh_texts() -> void:
 	var muted := AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Master"))
 	_sound_button.text = "Som: desligado" if muted else "Som: ligado"
 	_graphics_button.text = "Gráficos: %s" % GraphicsSettings.display_name(GameState.graphics_quality)
+
+
+func _open_settings() -> void:
+	var settings := SettingsMenu.new()
+	settings.environment = environment
+	add_child(settings)
+	settings.closed.connect(func() -> void:
+		_refresh_texts()
+		_continue_button.grab_focus())
 
 
 func _restart() -> void:

@@ -19,6 +19,8 @@ enum ModelVariant { SOLDIER, CROSSBOWMAN, ELITE, BOSS }
 @export var strike_animation: StringName = &"enemy_strike"
 ## Poderes de chefão; vazio para inimigos comuns.
 @export var boss: BossData
+## Espada que o chefão deixa ao ser derrotado pela primeira vez.
+@export var sword_drop: SwordItem
 
 @export_group("Visual demoníaco")
 ## Força da corrupção (veias e rachaduras de brasa) sobre o modelo, 0..1.

@@ -173,6 +173,15 @@ func _process(_delta: float) -> void:
 	_update_powers()
 
 
+## Modo cinema: esconde a HUD de jogo e deixa só a narração.
+func set_cinematic(value: bool) -> void:
+	for child: Node in $Root.get_children():
+		if child is CanvasItem and child != story:
+			(child as CanvasItem).visible = not value
+	if story != null:
+		story.set_cinematic(value)
+
+
 func bind_player(player: Player) -> void:
 	if story != null:
 		story.hero = player

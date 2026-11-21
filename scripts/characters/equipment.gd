@@ -33,7 +33,7 @@ static func sword(blade_material: Material, blade_length: float = 0.85) -> Node3
 static func fit_sword(item: SwordItem, reference: Dictionary) -> Dictionary:
 	var node := item.model.instantiate() as Node3D
 	var points := _model_points(node)
-	var frame := _blade_frame_from_points(points)
+	var frame := _blade_frame_from_points(points, item.flip_grip)
 	var model_basis := Basis(frame.axis, frame.width, frame.axis.cross(frame.width))
 	var target_axis: Vector3 = reference.axis
 	var target_width: Vector3 = reference.width
@@ -80,7 +80,7 @@ static func _model_points(root: Node3D) -> PackedVector3Array:
 
 
 ## Eixo da lâmina (do cabo para a ponta), largura, comprimento e pontos de cabo/guarda/ponta.
-static func _blade_frame_from_points(points: PackedVector3Array) -> Dictionary:
+static func _blade_frame_from_points(points: PackedVector3Array, flip: bool = false) -> Dictionary:
 	var box := AABB(points[0], Vector3.ZERO)
 	for point: Vector3 in points:
 		box = box.expand(point)
@@ -100,7 +100,7 @@ static func _blade_frame_from_points(points: PackedVector3Array) -> Dictionary:
 	var end_slices := maxi(2, slices * 15 / 100)
 	var low_end := _median(widths.slice(0, end_slices))
 	var high_end := _median(widths.slice(slices - end_slices, slices))
-	var grip_at_low := low_end <= high_end
+	var grip_at_low := (low_end <= high_end) != flip
 	var axis := Vector3.ZERO
 	axis[long] = 1.0 if grip_at_low else -1.0
 	var grip_end := center

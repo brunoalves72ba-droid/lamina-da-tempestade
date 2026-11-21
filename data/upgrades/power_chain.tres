@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"power_chain"
+display_name = "Corrente em Cadeia"
+stat_label = "Dano"
+costs = Array[int]([120, 240, 420])
+values = Array[float]([1.0, 1.2, 1.4, 1.65])
+secondary_label = "Recarga"
+secondary_values = Array[float]([1.0, 0.92, 0.84, 0.75])

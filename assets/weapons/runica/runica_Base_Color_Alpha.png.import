@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bj25kjpcf0cb"
-path="res://.godot/imported/runica_Base_Color.png-c116f13dace0d031ac55706fc4850b2b.ctex"
+uid="uid://c8w5q1imn8i6p"
+path="res://.godot/imported/runica_Base_Color_Alpha.png-ce3361c2e2a0647a98255e69a8797176.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/weapons/runica/runica_Base_Color.png"
-dest_files=["res://.godot/imported/runica_Base_Color.png-c116f13dace0d031ac55706fc4850b2b.ctex"]
+source_file="res://assets/weapons/runica/runica_Base_Color_Alpha.png"
+dest_files=["res://.godot/imported/runica_Base_Color_Alpha.png-ce3361c2e2a0647a98255e69a8797176.ctex"]
 
 [params]
 

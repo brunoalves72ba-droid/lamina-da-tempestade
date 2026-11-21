@@ -47,6 +47,14 @@ var equipped_sword: StringName = STARTING_SWORD
 var reputation: Dictionary[StringName, int] = {}
 ## Sangue, desmembramento e cinzas (Configurações). Salvo.
 var gore_enabled: bool = true
+## Volume geral 0..1 (Configurações). Salvo.
+var master_volume: float = 1.0
+## Recorde da Arena de Hordas (ondas sobrevividas). Salvo.
+var arena_best: int = 0
+## Como a próxima partida começa (não salvo): &"story" (campanha) ou &"arena".
+var launch_mode: StringName = &"story"
+## Tocar a introdução cinematográfica ao entrar na trilha (Novo Jogo / New Game+). Não salvo.
+var play_intro: bool = false
 ## Estado do mundo agora (não salvo; o Weather atualiza): 0..1.
 ## storm_intensity: tempestade fortalece os poderes de raio. night_factor: à noite os inimigos
 ## atacam mais rápido e mais forte.
@@ -134,9 +142,12 @@ func equipment_levels() -> int:
 	return total
 
 
-## Nível de ameaça dos inimigos: sobe com o nível do herói, o equipamento comprado e o New Game+.
+## Nível de ameaça dos inimigos: sobe com o nível do herói, o equipamento comprado, a espada
+## equipada e o New Game+.
 func threat_level() -> float:
-	return progression.threat_level(level, equipment_levels()) + new_game_plus * progression.new_game_plus_threat
+	var sword := SwordItem.find(equipped_sword)
+	var sword_threat := sword.threat if sword != null else 0.0
+	return progression.threat_level(level, equipment_levels()) + sword_threat + new_game_plus * progression.new_game_plus_threat
 
 
 # --- História, New Game+ e posição ---------------------------------------------
@@ -243,7 +254,8 @@ func to_dict() -> Dictionary:
 			"game_completed": game_completed, "new_game_plus": new_game_plus,
 			"checkpoint_progress": checkpoint_progress,
 			"owned_swords": owned_swords.map(func(id: StringName) -> String: return String(id)),
-			"equipped_sword": String(equipped_sword), "reputation": rep, "gore_enabled": gore_enabled}
+			"equipped_sword": String(equipped_sword), "reputation": rep, "gore_enabled": gore_enabled,
+			"master_volume": master_volume, "arena_best": arena_best}
 
 
 func from_dict(data: Dictionary) -> void:
@@ -269,6 +281,9 @@ func from_dict(data: Dictionary) -> void:
 	if not equipped_sword in owned_swords:
 		equipped_sword = STARTING_SWORD
 	gore_enabled = bool(data.get("gore_enabled", true))
+	master_volume = clampf(float(data.get("master_volume", 1.0)), 0.0, 1.0)
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(master_volume, 0.0001)))
+	arena_best = int(data.get("arena_best", 0))
 	reputation.clear()
 	var rep: Dictionary = data.get("reputation", {})
 	for faction: String in rep:

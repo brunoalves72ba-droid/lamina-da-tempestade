@@ -24,6 +24,7 @@ var _event_position: Vector3 = Vector3.ZERO
 ## Herói (para mostrar a distância até o evento).
 var hero: Node3D
 var _weather_label: Label
+var _prompt: Label
 
 
 func _ready() -> void:
@@ -32,6 +33,14 @@ func _ready() -> void:
 	_build_objective()
 	_build_narration()
 	_build_crosshair()
+	_prompt = _label(18, Color(1.0, 0.9, 0.6), HORIZONTAL_ALIGNMENT_CENTER)
+	_prompt.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_prompt.offset_left = -400.0
+	_prompt.offset_right = 400.0
+	_prompt.offset_top = -170.0
+	_prompt.offset_bottom = -140.0
+	_prompt.visible = false
+	add_child(_prompt)
 	Events.objective_changed.connect(show_objective)
 	Events.narration_requested.connect(queue_line)
 	Events.weather_changed.connect(func(weather_name: String, is_storm: bool) -> void:
@@ -55,6 +64,23 @@ func _process(delta: float) -> void:
 			_next_line()
 	elif not _queue.is_empty():
 		_next_line()
+
+
+## Cutscene: só a narração continua visível.
+func set_cinematic(value: bool) -> void:
+	for child: Node in get_children():
+		if child is CanvasItem and child != _narration_panel:
+			(child as CanvasItem).visible = not value
+	if not value:
+		_crosshair.visible = GameState.aim_mode == GameState.AimMode.FREE
+		_prompt.visible = _prompt.text != ""
+		_event_label.visible = _event_label.has_meta(&"title") and _event_label.get_meta(&"title") != ""
+
+
+## Dica de interação no centro, embaixo (ex.: "E: Ferreiro"). Vazio esconde.
+func set_prompt(text: String) -> void:
+	_prompt.text = text
+	_prompt.visible = text != ""
 
 
 func show_objective(arc_title: String, objective_text: String) -> void:

@@ -97,6 +97,14 @@ var _blade_glow_tween: Tween
 var blade_base: Marker3D
 var blade_tip: Marker3D
 var _trail: WeaponTrail
+## Espada equipada (SwordItem) e o modelo dela preso à mão (vazio = espada do Paladino).
+var sword: SwordItem
+## Bônus de dano do poder sendo lançado (evolução comprada na loja); 1 fora de um lançamento.
+var power_damage_factor: float = 1.0
+var _sword_node: Node3D
+## Referencial da espada original do Paladino (eixo, plano do fio, onde a mão segura).
+var _reference_frame: Dictionary = {}
+var _paladin_points: Array[Vector3] = []
 
 
 func _ready() -> void:
@@ -271,6 +279,8 @@ func _setup_blade() -> void:
 	var points := body.weapon_points(SWORD_MESH, &"mixamorig_RightHand")
 	if points.is_empty():
 		points = [Vector3(0.1, 0, 0), Vector3(0.95, 0, 0)]
+	_paladin_points = points
+	_reference_frame = Equipment.blade_frame(body.mesh_points_in_bone(SWORD_MESH, &"mixamorig_RightHand"), points[0], points[1])
 	var holder := Node3D.new()
 	holder.name = "BladePoints"
 	body.attach(&"mixamorig_RightHand", holder)
@@ -287,6 +297,31 @@ func _setup_blade() -> void:
 	_trail.base_marker = blade_base
 	_trail.tip_marker = blade_tip
 	add_child(_trail)
+
+
+## Troca a espada na mão (GDD §10.1). A do Paladino é a malha do modelo; as outras são
+## modelos baixados, encaixados automaticamente no lugar dela. Base/ponta do rastro acompanham.
+func equip_sword(item: SwordItem) -> void:
+	sword = item
+	if _sword_node != null:
+		_sword_node.get_parent().queue_free()
+		_sword_node = null
+	var paladin_sword := body.find_mesh(SWORD_MESH)
+	if item == null or item.model == null:
+		if paladin_sword != null:
+			paladin_sword.visible = true
+		blade_base.position = _paladin_points[0].lerp(_paladin_points[1], 0.2)
+		blade_tip.position = _paladin_points[1]
+		return
+	if paladin_sword != null:
+		paladin_sword.visible = false
+	var fitted := Equipment.fit_sword(item, _reference_frame)
+	_sword_node = fitted.node
+	body.attach(&"mixamorig_RightHand", _sword_node, _sword_node.transform)
+	for mesh: Node in _sword_node.find_children("*", "MeshInstance3D", true, false):
+		(mesh as MeshInstance3D).material_overlay = _blade_glow
+	blade_base.position = fitted.base
+	blade_tip.position = fitted.tip
 
 
 func _update_glow() -> void:
@@ -364,7 +399,7 @@ func build_attack_info(hit_index: int) -> DamageInfo:
 ## Com tempestade (Weather) os raios ficam até 30% mais fortes e eletrocutam por mais tempo.
 func build_power_info(multiplier: float, heavy: bool, shock_time: float = POWER_SHOCK_TIME) -> DamageInfo:
 	var info := DamageInfo.new()
-	info.amount = base_damage * multiplier * storm_multiplier()
+	info.amount = base_damage * multiplier * storm_multiplier() * power_damage_factor
 	info.element = element
 	info.is_heavy = heavy
 	info.is_power = true

@@ -32,6 +32,10 @@ const DANGER_COLOR := Color(1.0, 0.4, 0.35)
 @export var zone_clear_heal_fraction: float = 0.25
 ## Eventos dinâmicos (emboscadas, pedidos de socorro, patrulhas). Testes automáticos desligam.
 @export var dynamic_events: bool = true
+## Cutscenes (introdução, chefão derrotado, final). Testes automáticos desligam.
+@export var cinematics: bool = true
+## Loja unificada aberta nas fogueiras acesas (tecla E).
+@export var shop_scene: PackedScene = preload("res://ui/upgrade_shop/upgrade_shop.tscn")
 
 @export_group("Patrulhas")
 @export var patrol_entry: SpawnEntry
@@ -52,6 +56,14 @@ var _zone_generation: int = 0
 var _finished: bool = false
 var _started: bool = false
 const PUDDLES_PER_ZONE: int = 2
+const SHOP_RADIUS: float = 3.5
+const ENDING_LINES: Array[String] = [
+	"O fogo do céu desceu sobre o santuário. Pela primeira vez desde a queda, a chuva sobre Valdren veio limpa.",
+	"A Mácula recuou para as criptas. Não morreu — mas agora sabe o nome de quem a enfrenta.",
+	"Kael|A Ordem do Grifo vai renascer. E enquanto houver tempestade, haverá quem a carregue.",
+]
+var _shop: UpgradeShop
+var _shop_prompt_shown: bool = false
 ## Vales laterais: (metro da trilha onde começa, lado +1/-1) e comprimento.
 const SIDE_BRANCHES: Array[Vector2] = [Vector2(64.0, 1.0), Vector2(112.0, -1.0), Vector2(158.0, 1.0), Vector2(203.0, -1.0)]
 const SIDE_PATH_LENGTH: float = 48.0
@@ -64,6 +76,9 @@ var story: StoryDirector
 var weather: Weather
 ## Eventos dinâmicos do mundo aberto (GDD §9.3).
 var events: EventDirector
+## Cenas cinematográficas (GDD §4.2).
+var cutscene: Cutscene
+var _arena: ArenaDirector
 var _pause_menu: PauseMenu
 
 @onready var player: Player = %Player
@@ -133,23 +148,34 @@ func _ready() -> void:
 	story = StoryDirector.new()
 	story.name = "StoryDirector"
 	add_child(story)
-	story.begin()
+	cutscene = Cutscene.new()
+	cutscene.name = "Cutscene"
+	cutscene.level = self
+	add_child(cutscene)
+	Events.arc_completed.connect(_on_arc_completed)
+	if is_arena():
+		_setup_arena()
 	_hud.bind_player(player)
 	_hud.bind_progression()
 	Music.play_track(&"explore")
 	_hud.show_gold(run_gold)
 	GraphicsSettings.apply(get_viewport(), _environment.environment, GameState.graphics_quality)
-	_spawn_patrols()
+	if not is_arena():
+		_spawn_patrols()
 	_run()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"interact") and _started and not _finished and _shop == null 			and _pause_menu == null and nearest_lit_checkpoint() != null:
+		get_viewport().set_input_as_handled()
+		open_shop()
+		return
 	if event.is_action_pressed(&"pause") and _started and not _finished and pause_scene != null and _pause_menu == null:
 		get_viewport().set_input_as_handled()
 		_pause_menu = pause_scene.instantiate() as PauseMenu
 		_pause_menu.environment = _environment.environment
 		add_child(_pause_menu)
-		_pause_menu.restart_requested.connect(func() -> void: Scenes.go(get_tree(), Scenes.TRAIL))
+		_pause_menu.restart_requested.connect(func() -> void: LoadingScreen.go(get_tree(), Scenes.TRAIL))
 		_pause_menu.tree_exited.connect(func() -> void: _pause_menu = null)
 
 
@@ -157,9 +183,14 @@ func _physics_process(_delta: float) -> void:
 	if not _started or _finished or player.health.is_dead:
 		return
 	var hero := player.global_position
+	var near_shop := nearest_lit_checkpoint() != null
+	if near_shop != _shop_prompt_shown:
+		_shop_prompt_shown = near_shop
+		_hud.story.set_prompt("E: Ferreiro e Mestre Arcano (espadas, equipamento, poderes)" if near_shop else "")
 	var hero_progress := progress_of(hero)
-	for checkpoint: Checkpoint in checkpoints:
-		checkpoint.try_activate(hero, hero_progress)
+	if not is_arena():
+		for checkpoint: Checkpoint in checkpoints:
+			checkpoint.try_activate(hero, hero_progress)
 	if _active_zone == null:
 		for zone: CombatZone in zones:
 			if not zone.is_cleared and zone.contains(hero):
@@ -212,7 +243,13 @@ func _build_route() -> void:
 # --- Fluxo da partida -------------------------------------------------------
 
 func _run() -> void:
-	if show_element_select and element_select_scene != null:
+	if cinematics and GameState.play_intro and not is_arena():
+		GameState.play_intro = false
+		await get_tree().process_frame
+		await cutscene.play_intro()
+	if not is_arena():
+		story.begin()
+	if show_element_select and element_select_scene != null and not is_arena():
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		var menu := element_select_scene.instantiate() as ElementSelect
 		add_child(menu)
@@ -225,7 +262,10 @@ func _run() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	await get_tree().create_timer(start_delay, false, true).timeout
 	_started = true
-	_hud.show_encounter_text("Siga a trilha até o santuário")
+	if is_arena():
+		_arena.start()
+	else:
+		_hud.show_encounter_text("Siga a trilha até o santuário")
 
 
 func _start_zone(zone: CombatZone) -> void:
@@ -281,11 +321,17 @@ func _on_enemy_killed(enemy: Enemy) -> void:
 	run_gold += enemy.data.gold_reward
 	_hud.show_gold(run_gold)
 	SfxLibrary.play(player, &"coins")
+	GameState.add_xp(enemy.data.xp_reward)
+	if is_arena():
+		return  # a Arena é treino: não mexe na história nem dá espadas
+	if enemy.is_boss() and enemy.data.sword_drop != null:
+		_grant_sword_drop(enemy.data.sword_drop)
+	if enemy.is_boss() and cinematics and not is_arena():
+		cutscene.play_boss_defeat(enemy, enemy.data.boss.title)
 	if enemy.is_boss():
 		Events.boss_defeated.emit(StringName(enemy.data.resource_path.get_file().get_basename()))
 		if _active_zone != null:
 			Music.play_track(&"combat")
-	GameState.add_xp(enemy.data.xp_reward)
 
 
 func _on_leveled_up(level: int) -> void:
@@ -304,15 +350,94 @@ func _on_leveled_up(level: int) -> void:
 func _apply_player_stats() -> void:
 	var progression := GameState.progression
 	var level_bonus := GameState.level - 1
-	var damage := player.weapon.base_damage
+	var equipped := SwordItem.find(GameState.equipped_sword)
+	if equipped != player.sword:
+		player.equip_sword(equipped)
+	var sword_attack := equipped.attack if equipped != null else player.weapon.base_damage
+	var damage := sword_attack
 	var max_health := player.data.max_health
 	var reduction := player.data.damage_reduction
 	if sword_upgrade != null and armor_upgrade != null:
-		damage = sword_upgrade.value_at(GameState.level_of(sword_upgrade))
+		# Afiação (upgrade "Espada" do Ferreiro) soma por cima do ataque da espada equipada.
+		damage = sword_attack + sword_upgrade.value_at(GameState.level_of(sword_upgrade)) - sword_upgrade.value_at(0)
 		max_health = armor_upgrade.value_at(GameState.level_of(armor_upgrade))
 		reduction = armor_upgrade.secondary_at(GameState.level_of(armor_upgrade))
 	player.apply_stats(damage + level_bonus * progression.damage_per_level,
 			max_health + level_bonus * progression.health_per_level, reduction)
+
+
+## Espada deixada por um chefão: entra no inventário e é equipada se for melhor.
+func _grant_sword_drop(item: SwordItem) -> void:
+	if not GameState.grant_sword(item.id):
+		return
+	var current := SwordItem.find(GameState.equipped_sword)
+	if current == null or item.attack > current.attack:
+		GameState.equip_sword(item.id)
+		_apply_player_stats()
+	_hud.show_feedback("NOVA ESPADA: %s" % item.display_name.to_upper(), LEVEL_UP_COLOR)
+	Events.narration_requested.emit("Kael", "%s. %s" % [item.display_name, item.description], 4.5)
+	SaveManager.autosave()
+
+
+## Fogueira acesa ao alcance do herói (onde fica o Ferreiro e Mestre Arcano); null se nenhuma.
+func nearest_lit_checkpoint() -> Checkpoint:
+	for checkpoint: Checkpoint in checkpoints:
+		if checkpoint.is_lit and checkpoint.global_position.distance_to(player.global_position) <= SHOP_RADIUS:
+			return checkpoint
+	return null
+
+
+## Loja unificada na fogueira: pausa o jogo enquanto está aberta.
+func open_shop() -> void:
+	if shop_scene == null:
+		return
+	_shop = shop_scene.instantiate() as UpgradeShop
+	add_child(_shop)
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_shop.closed.connect(func() -> void:
+		_shop = null
+		get_tree().paused = false
+		_apply_player_stats()
+		if capture_mouse:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
+
+
+func is_arena() -> bool:
+	return GameState.launch_mode == &"arena"
+
+
+## Arena de Hordas: a clareira da Ponte de Pedra vira uma arena fechada com ondas sem fim.
+func _setup_arena() -> void:
+	dynamic_events = false
+	events.enabled = false
+	var arena_zone: CombatZone = zones[mini(2, zones.size() - 1)]
+	for zone: CombatZone in zones:
+		zone.restore_cleared()
+	_place_player(arena_zone.global_position + Vector3.UP * 0.4, route_direction(arena_zone.route_progress))
+	_respawn_point = player.global_position
+	arena_zone.set_barrier(true)
+	_arena = ArenaDirector.new()
+	_arena.name = "ArenaDirector"
+	_arena.level = self
+	_arena.zone = arena_zone
+	add_child(_arena)
+	_arena.wave_started.connect(func(number: int) -> void:
+		_hud.show_encounter_text("Arena de Hordas — Onda %d   (recorde %d)" % [number, GameState.arena_best])
+		_hud.show_feedback("ONDA %d" % number, TITLE_COLOR)
+		Music.play_track(&"boss" if number % 5 == 0 else &"combat"))
+	_arena.arena_over.connect(func(_survived: int) -> void: _finish(false))
+	Events.objective_changed.emit("Arena de Hordas", "Sobreviva ao máximo de ondas")
+
+
+func _on_arc_completed(arc_index: int) -> void:
+	if cinematics and arc_index < story.arcs.size():
+		cutscene.play_arc_complete(story.arcs[arc_index].title)
+
+
+## Esconde a HUD de jogo durante cutscenes (a narração continua aparecendo).
+func set_hud_visible(value: bool) -> void:
+	_hud.set_cinematic(not value)
 
 
 func is_running() -> bool:
@@ -409,6 +534,9 @@ func _on_player_died() -> void:
 	await get_tree().create_timer(respawn_delay, true, false, true).timeout
 	if _finished:
 		return
+	if is_arena():
+		_arena.stop()
+		return
 	var kept := floori(run_gold * (rewards.death_keep_fraction if rewards != null else 0.5))
 	GameState.add_gold(kept)
 	run_gold = 0
@@ -439,6 +567,8 @@ func _victory() -> void:
 	is_complete = true
 	Events.shrine_reached.emit()
 	completed.emit()
+	if cinematics:
+		await cutscene.play_ending(ENDING_LINES)
 	_finish(true)
 
 
@@ -455,6 +585,9 @@ func _finish(victory: bool) -> void:
 	if result_scene != null:
 		var screen := result_scene.instantiate() as ResultScreen
 		add_child(screen)
-		screen.show_result(victory, run_gold, gold_earned, "PERCURSO CONCLUÍDO")
-		screen.replay_requested.connect(func() -> void: Scenes.go(get_tree(), Scenes.TRAIL))
+		var title := "PERCURSO CONCLUÍDO"
+		if is_arena():
+			title = "ARENA: %d ONDAS (RECORDE %d)" % [maxi(_arena.wave - 1, 0), GameState.arena_best]
+		screen.show_result(victory, run_gold, gold_earned, title)
+		screen.replay_requested.connect(func() -> void: LoadingScreen.go(get_tree(), Scenes.TRAIL))
 	finished.emit(victory, gold_earned)

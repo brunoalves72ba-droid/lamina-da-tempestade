@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_script")
 id = &"sword"
-display_name = "Espada"
-stat_label = "ATK"
+display_name = "Afiação da lâmina"
+stat_label = "ATK (espada do Paladino)"
 costs = Array[int]([50, 100, 175, 275, 400])
 values = Array[float]([10.0, 12.0, 14.0, 16.0, 18.0, 20.0])
 secondary_label = ""

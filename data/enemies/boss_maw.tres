@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/resources/enemy_data.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://assets/characters/bosses/maw.fbx" id="2_model"]
 [ext_resource type="Script" path="res://scripts/resources/boss_data.gd" id="3_boss"]
+[ext_resource type="Resource" path="res://data/swords/celeste.tres" id="4_sword"]
 
 [sub_resource type="Resource" id="Resource_boss"]
 script = ExtResource("3_boss")
@@ -62,3 +63,4 @@ eye_offset = Vector3(0.05, 0.096, 0.165)
 corruption_color = Color(0.7, 0.3, 1, 1)
 eye_color = Color(0.8, 0.4, 1, 1)
 aura_color = Color(0.15, 0.03, 0.2, 1)
+sword_drop = ExtResource("4_sword")

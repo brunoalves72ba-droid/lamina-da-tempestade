@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SwordItem" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/sword_item.gd" id="1_sword"]
+[ext_resource type="PackedScene" path="res://assets/weapons/runica/runica.fbx" id="2_model"]
+[ext_resource type="Material" path="res://data/swords/runica_material.tres" id="3_mat"]
+
+[resource]
+script = ExtResource("1_sword")
+id = &"runica"
+display_name = "Lâmina Rúnica"
+description = "Partida em runas que guardam a memória de uma tempestade antiga."
+model = ExtResource("2_model")
+material = ExtResource("3_mat")
+length = 1.15
+roll_degrees = 0.0
+attack = 20.0
+price = 760
+threat = 2.0
+tier = 2

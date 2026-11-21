@@ -299,6 +299,7 @@ func _spawn_trail() -> WorldLevel:
 	var level := TRAIL_SCENE.instantiate() as WorldLevel
 	level.show_element_select = false
 	level.capture_mouse = false
+	level.cinematics = false
 	add_child(level)
 	return level
 

@@ -14,6 +14,8 @@ extends Resource
 @export var length: float = 1.1
 ## Gira o modelo em volta da lâmina (graus) para o fio ficar no plano certo.
 @export var roll_degrees: float = 0.0
+## Inverte cabo e ponta quando a detecção automática erra (lâmina mais larga que a guarda).
+@export var flip_grip: bool = false
 ## Ataque base (a Afiação do Ferreiro soma por cima).
 @export var attack: float = 10.0
 ## Preço no Ferreiro; 0 = não está à venda.
@@ -22,3 +24,28 @@ extends Resource
 @export var threat: float = 0.0
 ## Ordem na loja (mais fraca primeiro).
 @export var tier: int = 0
+
+const DIR := "res://data/swords/"
+
+static var _catalog: Array[SwordItem] = []
+
+
+## Todas as espadas do jogo, da mais fraca para a mais forte.
+static func all() -> Array[SwordItem]:
+	if _catalog.is_empty():
+		for file: String in DirAccess.get_files_at(DIR):
+			var path := DIR + file.trim_suffix(".remap")
+			if not path.ends_with(".tres"):
+				continue
+			var item := load(path) as SwordItem
+			if item != null:
+				_catalog.append(item)
+		_catalog.sort_custom(func(a: SwordItem, b: SwordItem) -> bool: return a.tier < b.tier)
+	return _catalog
+
+
+static func find(sword_id: StringName) -> SwordItem:
+	for item: SwordItem in all():
+		if item.id == sword_id:
+			return item
+	return null

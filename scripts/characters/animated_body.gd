@@ -105,6 +105,20 @@ func attach(bone_name: StringName, node: Node3D, offset: Transform3D = Transform
 	return attachment
 
 
+## Vértices de uma malha do modelo no espaço de um osso (pose de descanso).
+func mesh_points_in_bone(mesh_name: String, bone_name: StringName) -> PackedVector3Array:
+	var mesh := find_mesh(mesh_name)
+	var bone := skeleton.find_bone(bone_name)
+	var points := PackedVector3Array()
+	if mesh == null or bone == -1:
+		return points
+	var to_bone := skeleton.get_bone_global_rest(bone).affine_inverse() * skeleton.global_transform.affine_inverse() * mesh.global_transform
+	var faces := mesh.mesh.get_faces()
+	for i: int in range(0, faces.size(), maxi(1, faces.size() / 4000)):
+		points.append(to_bone * faces[i])
+	return points
+
+
 ## Ponta e base de uma arma que faz parte da malha do modelo (espada do Paladino), no espaço do osso
 ## que a segura: o vértice mais distante do osso na pose de descanso é a ponta.
 ## Retorna [base, ponta] (Vector3) ou [] se a malha não existir.

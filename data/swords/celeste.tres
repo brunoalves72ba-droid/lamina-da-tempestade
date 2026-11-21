@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SwordItem" format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/sword_item.gd" id="1_sword"]
+[ext_resource type="PackedScene" path="res://assets/weapons/celeste/celeste.fbx" id="2_model"]
+
+[resource]
+script = ExtResource("1_sword")
+id = &"celeste"
+display_name = "Espada Celeste"
+description = "Ouro e cristal do santuário. Dizem que o raio a reconhece."
+model = ExtResource("2_model")
+length = 1.2
+roll_degrees = 0.0
+attack = 27.0
+price = 1500
+threat = 3.0
+tier = 3

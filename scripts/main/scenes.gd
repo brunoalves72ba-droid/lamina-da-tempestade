@@ -3,7 +3,7 @@ extends RefCounted
 ## Caminhos das telas e troca de cena (menu principal ↔ fases).
 
 const MAIN_MENU := "res://scenes/main/main_menu.tscn"
-## Percurso com movimento livre (fase principal).
+## Percurso com movimento livre (fase principal; também a Arena, conforme GameState.launch_mode).
 const TRAIL := "res://scenes/levels/trail_01.tscn"
 
 

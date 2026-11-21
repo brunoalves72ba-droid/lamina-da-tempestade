@@ -6,6 +6,11 @@ extends Node
 signal power_used(slot: int)
 
 const AIM_HEIGHT: float = 1.1
+const UPGRADE_PATHS: Dictionary = {
+	PowerData.Kind.VOLTAIC_BLADE: "res://data/upgrades/power_voltaic.tres",
+	PowerData.Kind.CHAIN_LIGHTNING: "res://data/upgrades/power_chain.tres",
+	PowerData.Kind.STORM_FURY: "res://data/upgrades/power_storm.tres",
+}
 ## Salto da Corrente em Cadeia a partir de inimigo com armadura de metal (×alcance).
 const METAL_CHAIN_BONUS: float = 1.6
 const STORM_SHOCK_TIME: float = 3.0
@@ -26,6 +31,12 @@ func _ready() -> void:
 		cooldown.duration = power.cooldown
 		add_child(cooldown)
 		_cooldowns.append(cooldown)
+
+
+## Evolução comprada na loja para cada poder (dano e recarga por nível).
+static func power_upgrade(kind: int) -> UpgradeData:
+	var path: String = UPGRADE_PATHS.get(kind, "")
+	return load(path) as UpgradeData if path != "" else null
 
 
 func count() -> int:
@@ -61,7 +72,11 @@ func execute(slot: int) -> void:
 	var target := player.target
 	if target == null:
 		return
-	_cooldowns[slot].start(data.cooldown)
+	var upgrade := power_upgrade(data.kind)
+	var level := GameState.level_of(upgrade) if upgrade != null else 0
+	_cooldowns[slot].start(data.cooldown * (upgrade.secondary_at(level) if upgrade != null else 1.0))
+	# Poder evoluído no Mestre Arcano: mais dano (vale para todos os alvos deste lançamento).
+	player.power_damage_factor = upgrade.value_at(level) if upgrade != null else 1.0
 	if data.charge_cost > 0.0:
 		player.charge.consume_all()
 	match data.kind:
@@ -71,6 +86,7 @@ func execute(slot: int) -> void:
 			_chain_lightning(data, target)
 		PowerData.Kind.STORM_FURY:
 			_storm_fury(data, target)
+	player.power_damage_factor = 1.0
 	Events.power_unleashed.emit(data.kind, target.global_position, player.lightning_color())
 	power_used.emit(slot)
 
